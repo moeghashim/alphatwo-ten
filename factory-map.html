@@ -103,7 +103,36 @@
     position: relative;
     min-width: 1180px;
     height: 540px;
+    transition: height 0.6s cubic-bezier(0.65, 0.05, 0.36, 1);
   }
+  .canvas.expanded {
+    height: 780px;
+  }
+
+  /* Spawned company rows (appear during fan-out animation) */
+  .stage.spawned {
+    opacity: 0;
+    animation: tw-fade-in 0.5s ease forwards;
+  }
+  .company-label {
+    position: absolute;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.10em;
+    color: var(--clay);
+    white-space: nowrap;
+    /* center the label horizontally above the Hire+Work row pair */
+    transform: translateX(-50%);
+    pointer-events: none;
+    opacity: 0;
+    animation: tw-fade-in 0.5s ease 0.15s forwards;
+  }
+  @keyframes tw-fade-in {
+    to { opacity: 1; }
+  }
+  .extra-packet { /* secondary packets spawned at fan-out */ }
   .zone-label {
     position: absolute;
     top: -8px;
@@ -357,7 +386,7 @@
       <div class="divider"></div>
       <div>
         <div class="eyebrow">alphatwo-ten · factory map</div>
-        <h1>How a tool gets built<span class="accent">.</span></h1>
+        <h1>How a company gets built<span class="accent">.</span></h1>
       </div>
     </div>
     <div class="controls">
@@ -763,16 +792,136 @@ function renderPanel(id) {
 const playBtn = document.getElementById('play-btn');
 const resetBtn = document.getElementById('reset-btn');
 
+const COMPANIES = [
+  { label: 'Company 1' },          // row 0 — uses the existing Hire/Work cards
+  { label: 'Company 2' },          // row 1 — spawned
+  { label: 'Company 3' },          // row 2 — spawned
+];
+const ROW_OFFSET = 160;            // vertical gap between spawned company rows
+
+/* ---- Fan-out helpers ---- */
+function expandCanvas()  { document.getElementById('canvas').classList.add('expanded'); }
+function shrinkCanvas()  { document.getElementById('canvas').classList.remove('expanded'); }
+
+function makeCompanyLabel(text, x, y) {
+  const lbl = document.createElement('div');
+  lbl.className = 'company-label spawned-element';
+  lbl.style.left = x + 'px';
+  lbl.style.top  = y + 'px';
+  lbl.textContent = text;
+  document.getElementById('canvas').appendChild(lbl);
+  return lbl;
+}
+
+function spawnCompanyRow(idx, label) {
+  // idx 0 uses the existing cards (just add a label); idx > 0 clones Hire + Work
+  const hireMeta = stageById['hire'].meta;
+  const workMeta = stageById['work'].meta;
+  const hireR = rect('hire');
+  const workR = rect('work');
+  // Center the label horizontally over the Hire+Work row span
+  const rowCenterX = (hireR.x + workR.x + workR.w) / 2;
+  const rowY = hireMeta.y + (idx * ROW_OFFSET);
+  const labelY = rowY - 14; // sit just above the row
+
+  if (idx === 0) {
+    makeCompanyLabel(label, rowCenterX, labelY);
+    return;
+  }
+
+  const offsetY = idx * ROW_OFFSET;
+  const canvasEl = document.getElementById('canvas');
+
+  const cloneOne = (origId, newY, newId) => {
+    const original = stageById[origId].el;
+    const clone = original.cloneNode(true);
+    clone.classList.add('spawned', 'spawned-element');
+    clone.style.top = newY + 'px';
+    clone.dataset.id = newId;
+    clone.removeAttribute('onclick');
+    // replace click handler: clones inert during animation
+    clone.addEventListener('click', e => e.preventDefault());
+    canvasEl.appendChild(clone);
+    stageById[newId] = {
+      meta: { ...stageById[origId].meta, id: newId, y: newY },
+      el: clone,
+    };
+    return clone;
+  };
+
+  cloneOne('hire', hireMeta.y + offsetY, `hire-${idx}`);
+  cloneOne('work', workMeta.y + offsetY, `work-${idx}`);
+  makeCompanyLabel(label, rowCenterX, labelY);
+}
+
+function createExtraPacket() {
+  const p = document.createElement('div');
+  p.className = 'packet visible extra-packet';
+  p.style.background = 'var(--olive)';
+  document.getElementById('canvas').appendChild(p);
+  return p;
+}
+
+function cleanupFanout() {
+  document.querySelectorAll('.spawned-element').forEach(el => el.remove());
+  document.querySelectorAll('.extra-packet').forEach(p => p.remove());
+  // Drop dynamically-registered stage entries
+  Object.keys(stageById).forEach(k => {
+    if (/^(hire|work)-\d+$/.test(k)) delete stageById[k];
+  });
+}
+
+/* Keep the active stage in the viewport — horizontally scrolls the
+   canvas-wrap only (no vertical page scroll). Custom rAF-driven scroll
+   so each pan runs longer than the wait between waypoints, giving a
+   continuous rightward camera-follow feel rather than discrete shifts. */
+let _scrollRAF = null;
+function keepInView(target) {
+  const el = (typeof target === 'string') ? stageById[target]?.el : target;
+  if (!el) return;
+  const wrap = document.querySelector('.canvas-wrap');
+  if (!wrap) return;
+
+  const elRect = el.getBoundingClientRect();
+  const wrapRect = wrap.getBoundingClientRect();
+  const cardLeftInContent  = (elRect.left - wrapRect.left) + wrap.scrollLeft;
+  const cardCenterInContent = cardLeftInContent + (elRect.width / 2);
+  const desired = cardCenterInContent - (wrap.clientWidth / 2);
+  const maxScroll = Math.max(0, wrap.scrollWidth - wrap.clientWidth);
+  const finalX = Math.max(0, Math.min(maxScroll, desired));
+
+  // Cancel any in-flight scroll and start a new one from current position.
+  if (_scrollRAF) cancelAnimationFrame(_scrollRAF);
+  const startX = wrap.scrollLeft;
+  if (Math.abs(finalX - startX) < 1) return;
+
+  // Duration > waypoint interval (1100ms) so successive calls overlap
+  // and the scroll never decelerates to a full stop between stages.
+  const duration = 1400;
+  const easeOut = (t) => 1 - Math.pow(1 - t, 3);
+  const t0 = performance.now();
+
+  function step(now) {
+    const t = Math.min(1, (now - t0) / duration);
+    wrap.scrollLeft = startX + (finalX - startX) * easeOut(t);
+    if (t < 1) _scrollRAF = requestAnimationFrame(step);
+    else       _scrollRAF = null;
+  }
+  _scrollRAF = requestAnimationFrame(step);
+}
+
 let animating = false;
 async function watchBuild() {
   if (animating) return;
   animating = true;
   playBtn.disabled = true;
   deselect();
+  cleanupFanout();
+  shrinkCanvas();
   document.querySelectorAll('.stage').forEach(c => c.classList.remove('pulsing'));
 
-  // Sequence of waypoints
-  const waypoints = [
+  /* ---------- Phase 1: single packet through Spec → Catalog ---------- */
+  const phase1 = [
     'spec',
     'executor',
     'reviewer',
@@ -780,43 +929,75 @@ async function watchBuild() {
     'reviewer',  // re-review
     'publish',
     'catalog',
-    'hire',
-    'work',
   ];
 
   packet.classList.add('visible');
-  // Initial position at spec card center
-  const first = rect(waypoints[0]);
+  const first = rect(phase1[0]);
   packet.style.transform = `translate(${first.cx - 7}px, ${first.cy - 7}px)`;
   packet.style.background = 'var(--clay)';
+  keepInView('spec');
   await wait(550);
 
-  for (let i = 1; i < waypoints.length; i++) {
-    const id = waypoints[i];
+  for (let i = 1; i < phase1.length; i++) {
+    const id = phase1[i];
     const r = rect(id);
     const meta = stageById[id].meta;
-
-    // Recolor packet as it crosses zones
-    if (meta.zone === 'wall')      packet.style.background = 'var(--sky)';
+    if (meta.zone === 'wall')           packet.style.background = 'var(--sky)';
     else if (meta.zone === 'workforce') packet.style.background = 'var(--olive)';
-    else                            packet.style.background = 'var(--clay)';
-
-    // Move
+    else                                packet.style.background = 'var(--clay)';
     packet.style.transform = `translate(${r.cx - 7}px, ${r.cy - 7}px)`;
-
-    // Pulse the target stage
     document.querySelectorAll('.stage').forEach(c => c.classList.remove('pulsing'));
     stageById[id].el.classList.add('pulsing');
-
-    // Highlight + show panel for new stages (not revisits during loop)
     selectStage(id);
-
+    keepInView(id);
     await wait(1100);
   }
 
-  // Finish
+  /* ---------- Phase 2: fan-out — expand canvas, spawn customer rows ---------- */
+  expandCanvas();
+  COMPANIES.forEach((co, idx) => spawnCompanyRow(idx, co.label));
+  await wait(750); // let canvas grow + cards fade in
+  keepInView('hire-1'); // center vertically on the middle row so all 3 are visible
+
+  // Materialize extra packets at catalog
+  const catalogR = rect('catalog');
+  const packets = [packet];
+  for (let i = 1; i < COMPANIES.length; i++) {
+    const p = createExtraPacket();
+    p.style.transform = `translate(${catalogR.cx - 7}px, ${catalogR.cy - 7}px)`;
+    p.style.background = 'var(--sky)';
+    packets.push(p);
+  }
+  await wait(450);
+
+  /* ---------- Phase 3: fan out to each customer's Hire ---------- */
   document.querySelectorAll('.stage').forEach(c => c.classList.remove('pulsing'));
-  packet.classList.remove('visible');
+  packets.forEach((p, idx) => {
+    const hireId = idx === 0 ? 'hire' : `hire-${idx}`;
+    const r = rect(hireId);
+    p.style.background = 'var(--olive)';
+    p.style.transform  = `translate(${r.cx - 7}px, ${r.cy - 7}px)`;
+    stageById[hireId].el.classList.add('pulsing');
+  });
+  selectStage('hire');
+  keepInView('hire-1'); // middle Hire — horizontally + vertically centers the column
+  await wait(1300);
+
+  /* ---------- Phase 4: each customer's Work ---------- */
+  document.querySelectorAll('.stage').forEach(c => c.classList.remove('pulsing'));
+  packets.forEach((p, idx) => {
+    const workId = idx === 0 ? 'work' : `work-${idx}`;
+    const r = rect(workId);
+    p.style.transform = `translate(${r.cx - 7}px, ${r.cy - 7}px)`;
+    stageById[workId].el.classList.add('pulsing');
+  });
+  selectStage('work');
+  keepInView('work-1'); // middle Work
+  await wait(1700);
+
+  /* ---------- Finish (leave spawned rows visible so the final state reads as multi-tenant) ---------- */
+  document.querySelectorAll('.stage').forEach(c => c.classList.remove('pulsing'));
+  packets.forEach(p => p.classList.remove('visible'));
   playBtn.disabled = false;
   animating = false;
 }
@@ -828,6 +1009,8 @@ resetBtn.addEventListener('click', () => {
   deselect();
   document.querySelectorAll('.stage').forEach(c => c.classList.remove('pulsing'));
   packet.classList.remove('visible');
+  cleanupFanout();
+  shrinkCanvas();
 });
 </script>
 </body>
