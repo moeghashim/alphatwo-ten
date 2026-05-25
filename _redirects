@@ -1,0 +1,6 @@
+# Cloudflare Pages redirect rules
+# Format: <from>  <to>  <status>
+
+# Legacy /system-map paths → /design (page was renamed)
+/system-map       /design  301
+/system-map.html  /design  301
