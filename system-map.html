@@ -1,0 +1,823 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>tenwhy — System Map</title>
+<link rel="icon" type="image/svg+xml" href="branding/tenwhy.svg" />
+<style>
+  :root {
+    --bg: #FAF9F5;
+    --bg-2: #F0EEE6;
+    --bg-card: #FFFFFF;
+    --text: #3D3D3A;
+    --text-dim: #87867F;
+    --slate: #141413;
+    --border: #D1CFC5;
+    --border-hi: #B8B5A8;
+    --clay: #D97757;       /* warm accent */
+    --olive: #788C5D;      /* positive / locked */
+    --sky: #6A8CAF;        /* neutral / info */
+    --red: #B04A3F;        /* open / pending */
+    --oat: #E3DACC;        /* hover */
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.65 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px 24px 120px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 240px;
+    gap: 48px;
+  }
+  @media (max-width: 960px) {
+    .container { grid-template-columns: 1fr; }
+    aside { order: -1; position: static !important; }
+  }
+
+  /* Typography */
+  h1, h2, h3 {
+    font-family: ui-serif, Georgia, "Times New Roman", serif;
+    color: var(--slate);
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+  h1 { font-size: 36px; margin: 0 0 14px; line-height: 1.2; }
+  h2 { font-size: 24px; margin: 56px 0 14px; }
+  h3 { font-size: 18px; margin: 28px 0 8px; }
+  .eyebrow {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+  p { margin: 0 0 12px; max-width: 680px; }
+  p.lead { font-size: 17px; color: var(--text); max-width: 680px; }
+
+  a { color: var(--clay); text-decoration: none;
+      border-bottom: 1px dotted var(--clay); }
+  a:hover { background: rgba(217,119,87,0.08); }
+
+  code, .mono {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 13px;
+  }
+  code {
+    background: var(--bg-2);
+    padding: 1px 6px;
+    border-radius: 4px;
+    color: var(--slate);
+  }
+
+  /* Pills / tags */
+  .pill {
+    display: inline-block;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 4px;
+    line-height: 1.6;
+    vertical-align: middle;
+  }
+  .pill.locked { background: rgba(120,140,93,0.14); color: var(--olive); }
+  .pill.open   { background: rgba(176,74,63,0.10);  color: var(--red); }
+  .pill.note   { background: var(--bg-2);            color: var(--text-dim); }
+
+  /* Card / panel */
+  .panel {
+    background: var(--bg-card);
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    padding: 22px 26px;
+    margin: 16px 0 8px;
+  }
+  .panel h3 { margin-top: 0; }
+  .panel.tight { padding: 16px 20px; }
+  .panel.warm { border-color: rgba(217,119,87,0.35); background: #FDFCF9; }
+
+  /* Comparison / decision table */
+  table.decisions {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    margin: 14px 0;
+  }
+  table.decisions th, table.decisions td {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  table.decisions th {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 11px; font-weight: 500;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  table.decisions td.k { color: var(--text-dim); width: 36%; }
+  table.decisions td.v { color: var(--slate); }
+
+  /* Roster table */
+  table.roster {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+    margin: 14px 0;
+  }
+  table.roster th, table.roster td {
+    text-align: left;
+    padding: 9px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  table.roster th {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 11px; font-weight: 500;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  table.roster td.shift { color: var(--text-dim); font-family: ui-monospace, monospace; font-size: 12px; }
+  table.roster tr.tier-2 td { color: var(--text-dim); }
+  table.roster .badge {
+    font-family: ui-monospace, monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  /* Sidebar */
+  aside {
+    position: sticky;
+    top: 32px;
+    align-self: start;
+    background: var(--bg-card);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 18px 14px;
+    font-size: 13.5px;
+  }
+  aside .eyebrow { margin: 0 0 10px; }
+  aside ol { margin: 0; padding: 0 0 0 18px; }
+  aside li { margin: 5px 0; line-height: 1.45; }
+  aside li a { color: var(--text); border-bottom: none; }
+  aside li a:hover { color: var(--clay); }
+  aside .divider {
+    border-top: 1px solid var(--border);
+    margin: 12px -18px;
+  }
+  aside .stat {
+    font-size: 12.5px;
+    color: var(--text-dim);
+    display: flex;
+    justify-content: space-between;
+    margin: 4px 0;
+  }
+  aside .stat b { color: var(--slate); font-weight: 500; }
+
+  /* Diagram */
+  .diagram {
+    background: var(--bg-card);
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    padding: 28px;
+    margin: 20px 0;
+  }
+  .layer {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    gap: 20px;
+    align-items: center;
+    padding: 14px 0;
+    border-bottom: 1px dashed var(--border);
+  }
+  .layer:last-child { border-bottom: none; }
+  .layer-label {
+    font-family: ui-monospace, monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .layer-row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .tile {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 13.5px;
+    color: var(--slate);
+  }
+  .tile.accent { background: rgba(217,119,87,0.10); border-color: rgba(217,119,87,0.35); color: var(--slate); }
+  .tile.muted { color: var(--text-dim); background: transparent; border-style: dashed; }
+  .tile .sub {
+    display: block;
+    font-family: ui-monospace, monospace;
+    font-size: 10.5px;
+    color: var(--text-dim);
+    margin-top: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  /* Brain doc list */
+  ul.docs { list-style: none; padding: 0; margin: 12px 0; }
+  ul.docs li {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    gap: 16px;
+    align-items: baseline;
+  }
+  ul.docs li:last-child { border-bottom: none; }
+  ul.docs code { font-size: 12.5px; }
+  ul.docs .why { color: var(--text-dim); font-size: 13.5px; }
+
+  /* Split-screen mock */
+  .screen-mock {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    margin: 16px 0;
+    background: var(--bg-card);
+  }
+  .screen-mock > div { padding: 16px 18px; }
+  .screen-mock .chat-side { border-right: 1px solid var(--border); background: var(--bg-2); }
+  .screen-mock .files-side { background: var(--bg-card); }
+  .screen-mock .turn { font-size: 13.5px; margin-bottom: 10px; }
+  .screen-mock .turn b { color: var(--clay); font-weight: 600; }
+  .screen-mock .turn.user b { color: var(--sky); }
+  .screen-mock .file-row {
+    font-family: ui-monospace, monospace;
+    font-size: 12px;
+    padding: 4px 0;
+    color: var(--text);
+    display: flex; justify-content: space-between;
+  }
+  .screen-mock .file-row .updating { color: var(--clay); font-size: 10px; }
+  .screen-mock .label {
+    font-family: ui-monospace, monospace;
+    font-size: 10.5px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 8px;
+  }
+
+  /* footer note */
+  footer {
+    margin-top: 80px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 13px;
+    max-width: 680px;
+  }
+  hr.soft { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
+
+  /* Site footer (10claws attribution) */
+  .site-footer {
+    padding: 28px 24px 32px;
+    border-top: 1px solid var(--border);
+    text-align: center;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.10em;
+  }
+  .site-footer a {
+    color: var(--text-dim);
+    text-decoration: none;
+    border-bottom: 1px dotted var(--border-hi);
+  }
+  .site-footer a:hover { color: var(--clay); border-bottom-color: var(--clay); }
+
+  /* Page header (full-bleed) */
+  .page-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    position: relative;
+  }
+  .page-header .masthead-logo {
+    display: block;
+    width: 160px;
+    height: auto;
+    margin: 0 auto;
+  }
+  .page-header .nav-links {
+    position: absolute;
+    right: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    gap: 20px;
+    align-items: center;
+  }
+  .page-header .nav-link {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.10em;
+    color: var(--text-dim);
+    text-decoration: none;
+    border: none;
+    background: transparent;
+    padding: 4px 0;
+    transition: color .15s ease;
+  }
+  .page-header .nav-link:hover { color: var(--clay); background: transparent; }
+  @media (max-width: 720px) {
+    .page-header .nav-links { display: none; }
+  }
+</style>
+</head>
+<body>
+<header class="page-header">
+  <svg class="masthead-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 45.4" role="img" aria-label="tenwhy">
+    <path fill="#161615" d="m16 13.9h-6v-7.2h-0.3c-1.7 1.9-4.2 2.9-4.8 3.4-0.3 0.2-0.2 0.2-0.2 0.9v2.8h-3c-0.2 0.1-0.4 0.2-0.4 0.5v1.7c0 0.3 0.2 0.5 0.4 0.5 1.5 0 3.1 0.3 3.1 3.7v9.6c0 4 1.6 5.8 4.3 5.8 2.6 0.2 5.5-1.3 7-2.2l0.5-0.3c0.2-0.1 0.2-0.3 0.1-0.6l-0.9-1.6c-0.4-0.5-0.8 0-0.8 0l-0.8 0.4c-0.6 0.4-1.5 0.8-2.4 0.8-1.2 0-1.8-0.9-1.8-2.6v-12.6h5.6c0.3 0 0.5-0.1 0.5-0.4v-2.2c0-0.2-0.1-0.4-0.1-0.4z"/>
+    <path fill="#161615" d="m36.4 28.7c-0.3-0.1-0.5 0.3-0.5 0.3-0.9 1.1-2.6 3.1-5.8 3.2-3 0-5.1-1.7-6.3-4.7l12.8-5.4c0.3-2.7-2.7-8.7-8.8-8.7-4.8 0-10.1 2.9-10.1 10.7 0 4.8 3 11.5 11.3 11.5 5.6 0.1 8.2-3.1 9.2-5.5 0.2-0.5-0.3-0.6-0.3-0.6l-1.5-0.8zm-9.8-12c2.3-0.1 3.7 2.2 3.6 4.8l-6.8 3.5c-0.8-3.8-0.2-8.1 3.2-8.3z"/>
+    <path fill="#161615" d="m66.8 32.6c-1.6 0-3.1-0.4-3.1-3.6v-7.7c0-5.7-2.7-7.9-7.2-7.9-4 0-6.1 2.8-7.7 4.8l0.7-5.7c-2.8 1.7-6.5 2.9-9.1 3.2-0.2 0.1-0.3 0.3-0.3 0.5v1.6c0 0.4 0.4 0.4 0.4 0.4 1.4 0.1 2.7 0.9 2.7 4.9v5.5c0 2.6-1.3 4-2.7 4h-0.8c-0.2 0-0.4 0.2-0.4 0.5v1.5c0 0.3 0.2 0.5 0.4 0.5h12.5c0.3 0 0.5-0.2 0.5-0.5v-1.5c0-0.3-0.2-0.5-0.5-0.5h-0.3c-1.3 0-2.8-1.4-2.8-4v-7.7c0.7-2 3.3-4 5.5-4 2.5 0 3.1 1.4 3.1 4.3v7.4c0 3.2-0.9 4-2 4h-0.5c-0.2 0-0.5 0.2-0.5 0.5v1.5c0 0.3 0.2 0.5 0.5 0.5h11.6c0.3 0 0.5-0.2 0.5-0.5v-1.5c0-0.3-0.2-0.5-0.5-0.5z"/>
+    <path fill="#161615" d="m104.4 13.9h-8.1c-0.3 0-0.5 0.1-0.5 0.4v1.6c0 0.3 0.2 0.5 0.5 0.5h1c1 0 1.1 1.1 0.3 2.9l-3.8 9.2-3.8-8.9c-0.9-2.4-0.4-3.2 0.9-3.2h0.6c0.3 0 0.5-0.2 0.5-0.4v-1.7c0-0.2-0.2-0.4-0.4-0.4h-10.6c-0.2 0-0.5 0.1-0.5 0.4v1.6c0 0.3 0.3 0.5 0.5 0.5h0.9c1.2 0 1.4 0.7 0.5 3l-3.7 9-3.5-8.3c-1.2-2.7-0.9-3.7 0.8-3.7 0.3 0 0.5-0.2 0.5-0.4v-1.7c0-0.2-0.2-0.4-0.4-0.4h-9.9c-0.3 0-0.5 0.1-0.5 0.4v1.6c0 0.3 0.2 0.5 0.5 0.5h0.3c1 0 1.6 0.7 2.9 3.7l6.1 14.5c0.1 0.3 0.3 0.5 0.6 0.5h2.5c0.3 0 0.5-0.2 0.6-0.5l5.3-12.9 5.9 12.9c0.1 0.3 0.3 0.5 0.6 0.5h2.6c0.3 0 0.5-0.2 0.6-0.5l7-15.7c1-2.2 1.6-2.5 2.6-2.5h0.5c0.3 0 0.4-0.2 0.4-0.5v-1.6c0-0.2-0.1-0.4-0.3-0.4z"/>
+    <path fill="#161615" d="m132.4 32.6h-0.7c-1.3 0-2.8-1.2-2.8-3.8v-8.4c0-5.1-2.7-7.1-7.1-7.1-3.4 0-5.4 1.9-7.2 4.2v-16.5c0-0.2-0.2-0.1-0.3 0-2.5 1.8-5.6 3.1-8.6 4.3-0.2 0.1-0.2 0.3-0.2 0.5v1.4c0 0.4 0.4 0.5 0.4 0.5 1.7 0 2.6 0.9 2.6 4.4v16.7c0 2.6-1.2 3.8-2.6 3.8h-0.8c-0.3 0-0.5 0.2-0.5 0.5v1.5c0 0.3 0.2 0.5 0.5 0.5h12.8c0.3 0 0.6-0.1 0.6-0.5v-1.5c-0.1-0.7-0.4-0.5-1.1-0.5-1.4 0-2.8-1.4-2.8-3.9v-8.3c0.8-1.8 3.1-3.5 5.3-3.5 2.3 0 3.2 0.9 3.2 4.4v7.3c0 2.8-0.9 4-2.1 4h-0.5c-0.3 0-0.5 0.2-0.5 0.5v1.5c0 0.3 0.2 0.5 0.5 0.5h11.9c0.3 0 0.6-0.1 0.6-0.4v-1.6c0-0.3-0.2-0.5-0.6-0.5z"/>
+    <path fill="#161615" d="m154.1 13.9h-7.9c-0.4 0-0.2 0 0 0-0.3 0-0.5 0.1-0.5 0.4v1.6c0 0.3 0.2 0.5 0.5 0.5h1c1.2 0 1.1 1.2 0.2 3.2l-3.3 7.1-3-6.8c-1.2-2.7-1-3.5 0.6-3.5h0.3c0.2 0 0.4-0.2 0.4-0.4v-1.7c0-0.3-0.2-0.5-0.4-0.5h-10.5c-0.3 0-0.5 0.2-0.5 0.5v1.6c0 0.3 0.2 0.5 0.5 0.5h0.5c0.8 0 1.3 0.3 2.6 3l6.1 12.7-4.9 10c-0.1 0.2 0 0.4 0.2 0.5l2.5 1.2c0.2 0.1 0.6 0 0.7-0.2l11.9-24.6c1.1-2.2 1.7-2.6 2.6-2.6h0.5c0.3 0 0.4-0.2 0.4-0.5v-1.6c0-0.2-0.1-0.4-0.5-0.4z"/>
+    <circle fill="#D76F4D" cx="157.4" cy="33.7" r="1.7"/>
+  </svg>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link">Factory map  →</a>
+    <a href="stack-map.html" class="nav-link">Stack  →</a>
+  </div>
+</header>
+<div class="container">
+
+  <main>
+    <div class="eyebrow">alphatwo-ten</div>
+    <h1>How the system works</h1>
+    <p class="lead">
+      <strong>alphatwo-ten is a software factory.</strong> Two agents inside the factory
+      (an Executor and a Reviewer) build <em>tools</em>. Those tools get consumed by a workforce of
+      named role-agents that operates a real business on behalf of a customer. Each customer gets a
+      <strong>dashboard</strong>, a <strong>database</strong>, and a <strong>"brain"</strong> — a
+      private folder of living documents that every agent reads from and writes to.
+    </p>
+    <p class="lead">
+      This page is the comprehensive design reference. The <a href="index.html">homepage</a>
+      shows the interactive build pipeline, and the <a href="stack-map.html">stack map</a> covers
+      what runs where.
+    </p>
+
+
+    <!-- =========================================== -->
+    <h2 id="north-star">1 · North star</h2>
+    <div class="panel">
+      <p style="margin:0">
+        Most "AI agent" products are a single chatbot pretending to be many things. This is the
+        opposite: a small <strong>factory</strong> that ships specialized agent-tools, and a clearly
+        ranked <strong>workforce</strong> that uses them. Specialization on the inside, one human
+        touchpoint on the outside.
+      </p>
+    </div>
+
+
+    <!-- =========================================== -->
+    <h2 id="layers">2 · The two layers</h2>
+    <p>
+      The whole system splits cleanly in two. The factory is shared infrastructure (one of these
+      exists for all customers). The workforce is per-customer (one of these exists per customer
+      we sign up).
+    </p>
+
+    <div class="diagram">
+      <div class="layer">
+        <div class="layer-label">Factory<br/><span style="opacity:.6">(shared)</span></div>
+        <div class="layer-row">
+          <div class="tile accent">Executor <span class="sub">builds tools</span></div>
+          <div class="tile accent">Reviewer <span class="sub">critiques + approves</span></div>
+          <div class="tile">Tool Catalog <span class="sub">versioned registry</span></div>
+        </div>
+      </div>
+      <div class="layer">
+        <div class="layer-label">Workforce<br/><span style="opacity:.6">(per&#8209;customer)</span></div>
+        <div class="layer-row">
+          <div class="tile accent">Maestro <span class="sub">v0.1 — only agent</span></div>
+          <div class="tile muted">Consigliere <span class="sub">future</span></div>
+          <div class="tile muted">12 specialists <span class="sub">hiring roadmap</span></div>
+        </div>
+      </div>
+      <div class="layer">
+        <div class="layer-label">Customer<br/><span style="opacity:.6">(per&#8209;customer)</span></div>
+        <div class="layer-row">
+          <div class="tile">Dashboard <span class="sub">human UI</span></div>
+          <div class="tile">Brain repo <span class="sub">GitHub · private</span></div>
+          <div class="tile">Postgres <span class="sub">ops state · RLS</span></div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- =========================================== -->
+    <h2 id="v01">3 · v0.1 — what we build first</h2>
+    <p>
+      The big realization of this grill: <strong>Maestro is the first agent we build</strong>, not
+      one of the 12 listed specialists. Every future agent depends on Maestro's output to be useful.
+      Building a specialist first would just be a chatbot in costume.
+    </p>
+    <div class="panel warm">
+      <h3 style="margin-top:0">v0.1 milestone — Maestro alone</h3>
+      <p style="margin-bottom:8px">
+        Factory + Maestro + Dashboard + Brain repo + Postgres. No other agents exist yet. The 12
+        specialists become a <strong>hiring roadmap</strong>, not a v1 deliverable. This mirrors
+        how real CEOs work — they do everything themselves until they hire.
+      </p>
+      <table class="decisions" style="margin-top:14px">
+        <tr>
+          <td class="k">Layer 1 — Factory</td>
+          <td class="v">Hand-coded for v0.1 (it can't bootstrap itself yet). Becomes the machine that hires the specialists later.</td>
+        </tr>
+        <tr>
+          <td class="k">Layer 2 — Workforce</td>
+          <td class="v">Maestro only. Acts as the customer's Personal CEO + CFO + Chief of Staff.</td>
+        </tr>
+        <tr>
+          <td class="k">Layer 3 — Customer surfaces</td>
+          <td class="v">A dashboard, a private GitHub brain repo, a Postgres row for operational state.</td>
+        </tr>
+      </table>
+    </div>
+
+
+    <!-- =========================================== -->
+    <h2 id="maestro">4 · Maestro's job</h2>
+    <p>
+      Maestro <em>interviews the customer</em> and writes their findings into a structured "brain."
+      The customer can show up with as little as an idea, a description, or a URL — Maestro takes
+      it from there.
+    </p>
+
+    <h3>The first decision Maestro makes</h3>
+    <p>
+      Before anything else, Maestro figures out whether this is <strong>an idea</strong> or
+      <strong>an established business</strong>. The two flows produce different brain content
+      (aspirational vs. inventory-heavy), so the differentiation has to happen early.
+    </p>
+    <div class="panel tight">
+      <table class="decisions">
+        <tr><th>Mechanism</th><th>How it works</th></tr>
+        <tr>
+          <td class="k mono">Ask + verify</td>
+          <td class="v">Maestro asks the customer directly during the interview, AND verifies via URL if one was given (working site with products = established). Customer can override.</td>
+        </tr>
+      </table>
+    </div>
+
+    <h3>What Maestro can see (established businesses)</h3>
+    <div class="panel tight">
+      <table class="decisions">
+        <tr><th>Source</th><th>v0.1 access</th></tr>
+        <tr><td class="k">Customer's answers</td><td class="v">Yes — primary input.</td></tr>
+        <tr><td class="k">Public website (URL)</td><td class="v">Yes — Maestro scrapes homepage, about, products, pricing to pre-fill drafts.</td></tr>
+        <tr><td class="k">Integrations (Stripe, Shopify, GA, etc.)</td><td class="v" style="color:var(--text-dim)">Not in v0.1. Comes later.</td></tr>
+      </table>
+    </div>
+
+
+    <!-- =========================================== -->
+    <h2 id="brain">5 · The customer's brain — 8 living documents</h2>
+    <p>
+      Maestro's output is a folder of <strong>HTML documents</strong> (not bare markdown), styled
+      like this page. They live in the customer's private GitHub repo and update as Maestro and
+      future specialists learn more.
+    </p>
+    <p>
+      Every future agent we hire (Max, Tom, John…) reads from this brain before doing any work.
+      That's why Maestro had to be first — without these documents, no specialist has context.
+    </p>
+
+    <ul class="docs">
+      <li><code>business.html</code><span class="why">What the business / idea is. Problem, value prop, what it does and doesn't do.</span></li>
+      <li><code>customer.html</code><span class="why">Who the founder is. Role, background, working style, what they want from the system.</span></li>
+      <li><code>product.html</code><span class="why">What they sell (or want to sell). Offerings, pricing, format.</span></li>
+      <li><code>audience.html</code><span class="why">Who they sell to. Personas, jobs-to-be-done, channels they live on.</span></li>
+      <li><code>voice.html</code><span class="why">Brand voice, tone, vocabulary. Words they use, words they avoid.</span></li>
+      <li><code>assets.html</code><span class="why">What they already have. Existing site, accounts, files, audiences, traffic.</span></li>
+      <li><code>goals.html</code><span class="why">What they're trying to achieve. North-star metric, near-term targets, time horizons.</span></li>
+      <li><code>status.html</code><span class="why">Stage marker — idea vs. established, runway, momentum, current bottleneck.</span></li>
+    </ul>
+
+    <p>
+      <span class="pill note">Format note</span> &nbsp;Documents are rendered as HTML in the style
+      of this page (Thariq's "concept explainer" pattern — serif headings, monospace eyebrows,
+      ivory background, clay accents). HTML is what the customer sees; the source-of-truth file
+      committed to git is the same HTML.
+    </p>
+
+
+    <!-- =========================================== -->
+    <h2 id="ux">6 · How the customer experiences it</h2>
+    <p>
+      The dashboard is a <strong>live split-screen</strong>: Maestro's chat on the left, the brain
+      documents on the right. As the conversation produces facts, the right side updates in
+      real-time — the customer watches their own "brain" form.
+    </p>
+
+    <div class="screen-mock">
+      <div class="chat-side">
+        <div class="label">Conversation · Maestro</div>
+        <div class="turn"><b>Maestro</b> — Tell me about the business in one sentence. If you have a website, share the URL too.</div>
+        <div class="turn user"><b>You</b> — A subscription box for indoor plants. plantroom.co</div>
+        <div class="turn"><b>Maestro</b> — Got it. Reading plantroom.co now. Quick check — would you call this an <em>idea</em> or an <em>established</em> business at this point?</div>
+        <div class="turn user"><b>You</b> — Established. ~600 subscribers, 18 months in.</div>
+        <div class="turn"><b>Maestro</b> — Perfect. I'll work through 8 documents with you. Starting with <code>business.html</code> — who's your ideal subscriber?</div>
+      </div>
+      <div class="files-side">
+        <div class="label">Brain · plantroom-co</div>
+        <div class="file-row"><span><code>maestro/business.html</code></span><span class="updating">writing…</span></div>
+        <div class="file-row"><span><code>maestro/customer.html</code></span><span style="color:var(--text-dim)">queued</span></div>
+        <div class="file-row"><span><code>maestro/product.html</code></span><span style="color:var(--text-dim)">draft from scrape</span></div>
+        <div class="file-row"><span><code>maestro/audience.html</code></span><span style="color:var(--text-dim)">queued</span></div>
+        <div class="file-row"><span><code>maestro/voice.html</code></span><span style="color:var(--text-dim)">queued</span></div>
+        <div class="file-row"><span><code>maestro/assets.html</code></span><span style="color:var(--text-dim)">draft from scrape</span></div>
+        <div class="file-row"><span><code>maestro/goals.html</code></span><span style="color:var(--text-dim)">queued</span></div>
+        <div class="file-row"><span><code>maestro/status.html</code></span><span style="color:var(--olive)">established · confirmed</span></div>
+      </div>
+    </div>
+
+    <p>
+      <span class="pill note">Conversation style</span> &nbsp;Guided + open-ended follow-ups.
+      Maestro works through the 8 documents as an agenda (predictable enough to ship), but each
+      section is conversation, not a form. He validates, summarizes, asks follow-ups, and lets the
+      customer steer.
+    </p>
+
+    <h3>The dashboard is generative</h3>
+    <p>
+      One dashboard application serves every customer (multi-tenant), but the <strong>layout itself
+      isn't fixed</strong>. After the interview, Maestro emits a JSON spec describing which widgets,
+      metrics, and panels this customer needs. <a href="https://json-render.dev/">json-render.dev</a>
+      renders that JSON into React UI from a constrained component catalog.
+    </p>
+    <p>
+      Result: a content business and a product business get different dashboards out of the same
+      app. Maestro keeps updating the spec as the brain evolves and as specialists get hired —
+      adding Max means SEO widgets appear, adding Tom means a media library appears.
+    </p>
+    <div class="panel tight">
+      <table class="decisions">
+        <tr><th>Output of Maestro</th><th>Lives in</th><th>Purpose</th></tr>
+        <tr>
+          <td class="k"><code>brain/*.html</code></td>
+          <td class="v">Customer's GitHub repo</td>
+          <td class="v">What we know about the customer (truth)</td>
+        </tr>
+        <tr>
+          <td class="k"><code>dashboard.json</code></td>
+          <td class="v">Postgres (versioned)</td>
+          <td class="v">How the customer sees + interacts with the work (UI spec)</td>
+        </tr>
+      </table>
+    </div>
+
+
+    <!-- =========================================== -->
+    <h2 id="storage">7 · Where the data lives</h2>
+    <p>
+      Two stores, each with a clear job. Nothing lives in both.
+    </p>
+    <table class="decisions">
+      <tr><th>Store</th><th>What's in it</th></tr>
+      <tr>
+        <td class="k"><code>tenwhy-brains/&lt;customer&gt;</code><br/><span class="mono" style="color:var(--text-dim)">GitHub repo · private</span></td>
+        <td class="v">
+          The brain. Folder per agent: <code>/maestro/</code> at v0.1; later <code>/max/</code>,
+          <code>/john/</code>, etc. as specialists get hired. Each agent only writes to its own
+          folder — clean commit attribution, no merge conflicts.
+        </td>
+      </tr>
+      <tr>
+        <td class="k">Shared Postgres<br/><span class="mono" style="color:var(--text-dim)">RLS on <code>customer_id</code></span></td>
+        <td class="v">
+          Operational state: customer accounts, chat history, agent task queues, scheduling,
+          audit logs. Same Row-Level Security pattern already in the PRD.
+        </td>
+      </tr>
+    </table>
+
+    <h3>Why a git repo for the brain (not the database)</h3>
+    <p>
+      Three reasons: it's <strong>portable</strong> (the customer can clone or export their brain
+      at any time — they own it), it's <strong>versioned for free</strong> (every change is a
+      commit, with attribution to whichever agent made it), and it forces <strong>clear
+      ownership boundaries</strong> (one folder per agent, no fighting over rows).
+    </p>
+
+
+    <!-- =========================================== -->
+    <h2 id="tool">8 · What a tool actually is</h2>
+    <p>
+      A "tool" is the unit of work the factory produces and a specialist consumes. It's
+      <strong>not</strong> just an API or a widget — it's a self-contained pair.
+    </p>
+    <div class="panel">
+      <h3 style="margin-top:0">Anatomy of a tool</h3>
+      <table class="decisions">
+        <tr><th>Part</th><th>What it is</th></tr>
+        <tr>
+          <td class="k">CLI binary</td>
+          <td class="v">A command-line program that does the work (run an SEO scan, sync a catalog, draft a brief). Standalone, scriptable, testable on its own.</td>
+        </tr>
+        <tr>
+          <td class="k">Skill</td>
+          <td class="v">A markdown file that teaches an agent how to use the CLI — what it's for, when to invoke it, expected inputs/outputs, examples. Same shape as a Claude Code skill.</td>
+        </tr>
+        <tr>
+          <td class="k">(optional) widget spec</td>
+          <td class="v">If the tool needs a dashboard surface, it ships a json-render widget definition that Maestro can include in <code>dashboard.json</code>.</td>
+        </tr>
+        <tr>
+          <td class="k">(optional) schema migration</td>
+          <td class="v">If the tool needs new tables/columns in the shared Postgres (under the customer's RLS scope), it ships SQL.</td>
+        </tr>
+      </table>
+    </div>
+    <p>
+      One tool = one GitHub repo (<code>tenwhy-tools/&lt;name&gt;</code>). Built by the factory
+      (Executor + Reviewer in a Sapiom µVM), versioned independently, consumed by exactly one
+      specialist role.
+    </p>
+
+    <h3>How an agent uses a tool</h3>
+    <p>
+      When a specialist is hired, the platform loads the tool's <strong>Skill</strong> into that
+      agent's context. The agent reads the skill, decides when to invoke the CLI (based on its
+      shift schedule, a Maestro task, or an event), and runs it. Output gets committed to the
+      agent's folder in the customer's brain repo.
+    </p>
+
+    <h3>The factory–workforce wall</h3>
+    <div class="panel warm">
+      <p style="margin:0 0 8px">
+        <strong>The Factory and the Workforce are two separate systems.</strong> They share a
+        platform and infrastructure, but they never call each other directly. The factory's
+        only output to the workforce is a published tool repo. The workforce never reaches
+        back into the factory.
+      </p>
+      <p style="margin:0">
+        Each side is <em>aware</em> of the other's existence (the factory has to produce tools in
+        a shape the workforce can consume; the workforce has to be able to load any catalog
+        tool). But the wall makes scaling, deploying, and reasoning about each side independent.
+      </p>
+    </div>
+
+
+    <!-- =========================================== -->
+    <h2 id="roadmap">9 · The hiring roadmap</h2>
+    <p>
+      Once Maestro is live, the factory's job is to <strong>build the next specialist's tool</strong>
+      and ship it into the catalog. When the customer (or Maestro) decides they need that role,
+      Maestro "hires" them — the specialist's folder appears in the brain repo and they start
+      doing their job.
+    </p>
+    <p>
+      The 12 candidates from the original brief, ordered roughly by likely-first-to-hire. Names
+      marked <span style="color:var(--clay)">?</span> are still unnamed.
+    </p>
+
+    <table class="roster">
+      <tr>
+        <th>Agent</th><th>Job</th><th>Tool</th><th>Shift</th>
+      </tr>
+      <tr><td>Max</td><td>SEO</td><td>seo-tool</td><td class="shift">daily</td></tr>
+      <tr><td>Vic</td><td>Media creation</td><td>media-tool</td><td class="shift">daily</td></tr>
+      <tr><td>Sac</td><td>SEM</td><td>sem-tool</td><td class="shift">daily</td></tr>
+      <tr><td>Jon</td><td>Catalog</td><td>catalog-tool</td><td class="shift">daily</td></tr>
+      <tr class="tier-2"><td>Tom</td><td>Market research</td><td>research-tool</td><td class="shift">daily</td></tr>
+      <tr class="tier-2"><td>Roy</td><td>Market watch</td><td>market-watch-tool</td><td class="shift">night</td></tr>
+      <tr class="tier-2"><td>Moz</td><td>Design</td><td>design-tool</td><td class="shift">daily</td></tr>
+      <tr class="tier-2"><td>Sid</td><td>Quality assurance</td><td>qa-tool</td><td class="shift">night</td></tr>
+      <tr class="tier-2"><td>Sal</td><td>Customer support</td><td>support-tool</td><td class="shift">24/7</td></tr>
+      <tr class="tier-2"><td>Ray</td><td>Legal</td><td>legal-tool</td><td class="shift">1 day/week</td></tr>
+      <tr class="tier-2"><td>Lou</td><td>Accounting</td><td>accounting-tool</td><td class="shift">daily</td></tr>
+      <tr class="tier-2"><td>Nic</td><td>Website</td><td>web-builder-tool</td><td class="shift">daily</td></tr>
+    </table>
+    <p style="font-size:13px;color:var(--text-dim)">
+      All 12 are <strong>unhired</strong> in v0.1 — only Maestro ships. The factory will build each
+      tool when Maestro suggests the hire and the customer approves (decision #21). Top 4 rows
+      represent the earliest-likely hires.
+    </p>
+    <p>
+      Also future: <strong>Consigliere</strong> (strategic advisor sitting alongside Maestro,
+      advises only — decision #19).
+    </p>
+
+    <h3>Renames from the original brief</h3>
+    <table class="decisions">
+      <tr><th>Was</th><th>Now</th><th>Reason</th></tr>
+      <tr><td class="k">John</td><td class="v"><strong>Jon</strong></td><td class="v">4-letter outlier in the original roster; shortened for consistency with the 3-letter pattern.</td></tr>
+      <tr><td class="k">Tom (Media)</td><td class="v"><strong>Vic</strong></td><td class="v">Tom moved to Market Research; Vic takes Media Creation.</td></tr>
+      <tr><td class="k">Lawyer "Regis"</td><td class="v"><strong>Ray</strong></td><td class="v">3-letter agent name; "Regis" is no longer used (was the placeholder).</td></tr>
+    </table>
+
+
+    <!-- =========================================== -->
+    <h2 id="locked">10 · Decisions locked in this grill</h2>
+    <p>Each one is now a constraint on everything downstream.</p>
+    <table class="decisions">
+      <tr><th>#</th><th>Decision</th></tr>
+      <tr><td class="k">1</td><td class="v"><span class="pill locked">locked</span> v2 layers on top of v1 — v1's form-to-app demo stays as the marketing surface.</td></tr>
+      <tr><td class="k">2</td><td class="v"><span class="pill locked">locked</span> Maestro is the first agent we build, not a 13th invented one.</td></tr>
+      <tr><td class="k">3</td><td class="v"><span class="pill locked">locked</span> The 12 listed specialists are a hiring roadmap, not a v1 deliverable.</td></tr>
+      <tr><td class="k">4</td><td class="v"><span class="pill locked">locked</span> Maestro v0.1 = customer interviewer + producer of a living brain.</td></tr>
+      <tr><td class="k">5</td><td class="v"><span class="pill locked">locked</span> Maestro accepts as little as an idea / description / URL.</td></tr>
+      <tr><td class="k">6</td><td class="v"><span class="pill locked">locked</span> 8-document brain pack: business · customer · product · audience · voice · assets · goals · status.</td></tr>
+      <tr><td class="k">7</td><td class="v"><span class="pill locked">locked</span> Idea vs. established: ask the customer + verify via URL.</td></tr>
+      <tr><td class="k">8</td><td class="v"><span class="pill locked">locked</span> Established business access in v0.1 = answers + public URL scrape. No integrations.</td></tr>
+      <tr><td class="k">9</td><td class="v"><span class="pill locked">locked</span> Conversation style = guided agenda + open-ended follow-ups.</td></tr>
+      <tr><td class="k">10</td><td class="v"><span class="pill locked">locked</span> File visibility = live split-screen (chat left, brain right).</td></tr>
+      <tr><td class="k">11</td><td class="v"><span class="pill locked">locked</span> Brain documents are rendered/stored as <strong>HTML</strong>, styled like this page.</td></tr>
+      <tr><td class="k">12</td><td class="v"><span class="pill locked">locked</span> Brain storage = per-customer GitHub repo. Operational state = shared Postgres + RLS.</td></tr>
+      <tr><td class="k">13</td><td class="v"><span class="pill locked">locked</span> GitHub home = dedicated platform org (e.g. <code>tenwhy-brains</code>).</td></tr>
+      <tr><td class="k">14</td><td class="v"><span class="pill locked">locked</span> Brain repos are private by default.</td></tr>
+      <tr><td class="k">15</td><td class="v"><span class="pill locked">locked</span> Repo layout = folder per agent (<code>/maestro/</code>, later <code>/max/</code>…).</td></tr>
+      <tr><td class="k">16</td><td class="v"><span class="pill locked">locked</span> Maestro runtime = stateless HTTP API (load from DB+repo, call LLM, write back). Fallbacks noted: long-lived worker, µVM-per-session, direct-from-frontend if this doesn't hold up.</td></tr>
+      <tr><td class="k">17</td><td class="v"><span class="pill locked">locked</span> Dashboard = single multi-tenant app, with a <strong>generative UI</strong> driven by Maestro's <code>dashboard.json</code> spec, rendered via <a href="https://json-render.dev/">json-render.dev</a>.</td></tr>
+      <tr><td class="k">18</td><td class="v"><span class="pill locked">locked</span> Customer auth = email + magic link. No passwords.</td></tr>
+      <tr><td class="k">19</td><td class="v"><span class="pill locked">locked</span> Consigliere advises only — Maestro has final say in the workforce. (Consigliere may not even ship in v1.)</td></tr>
+      <tr><td class="k">20</td><td class="v"><span class="pill locked">locked</span> Specialist-vs-Maestro disagreements — Maestro decides. Specialists can flag concerns; Maestro hears them; Maestro calls it.</td></tr>
+      <tr><td class="k">21</td><td class="v"><span class="pill locked">locked</span> Hiring flow — Maestro suggests, customer approves. Surfaces as an Approve card in the dashboard.</td></tr>
+      <tr><td class="k">22</td><td class="v"><span class="pill locked">locked</span> Specialist activation = all three: cron (for shifts), on-demand (from Maestro), and events (reactions to brain changes / dashboard actions).</td></tr>
+      <tr><td class="k">23</td><td class="v"><span class="pill locked">locked</span> One GitHub repo per tool (<code>tenwhy-tools/&lt;name&gt;</code>). Each tool = <strong>CLI + Skill</strong> (markdown teaching an agent to use the CLI). Same shape as Claude Code skills.</td></tr>
+      <tr><td class="k">24</td><td class="v"><span class="pill locked">locked</span> Factory runtime = Sapiom µVM per build job. Factory and Workforce share a platform but have <strong>no direct interaction</strong> — only handoff is a published tool repo.</td></tr>
+      <tr><td class="k">25</td><td class="v"><span class="pill locked">locked</span> Billing = hybrid. Flat base subscription (Maestro + some specialists), metered add-ons for high-cost agents (e.g. media gen, paid ads).</td></tr>
+      <tr><td class="k">26</td><td class="v"><span class="pill locked">locked</span> Specialist roster locked — all 3-letter names: Max, Vic, Sac, Jon, Tom, Roy, Moz, Sid, Sal, Ray, Lou, Nic. (Orchestrator names — Maestro, Consigliere — keep their full form.)</td></tr>
+      <tr><td class="k">27</td><td class="v"><span class="pill locked">locked</span> Renames from original brief: John → Jon, Tom (Media) → Vic (Tom moves to Research), Lawyer "Regis" → Ray.</td></tr>
+    </table>
+
+
+    <!-- =========================================== -->
+    <h2 id="open">11 · Still on the grill</h2>
+    <div class="panel" style="background:rgba(120,140,93,0.08); border-color:rgba(120,140,93,0.35)">
+      <p style="margin:0">
+        <span class="pill locked">all clear</span> &nbsp;Every question from this session is
+        resolved — <strong>27 decisions locked, 0 open</strong>. Next time we sit down, we either
+        revisit one of the locked decisions (each is changeable) or move on to building.
+      </p>
+    </div>
+    <h3>What naturally comes next</h3>
+    <p>Not "open questions" — just the obvious work that follows from what we decided:</p>
+    <table class="decisions">
+      <tr><th>Next</th><th>What it means</th></tr>
+      <tr><td class="k">Skeleton repos</td><td class="v">Create the <code>tenwhy-brains</code> and <code>tenwhy-tools</code> GitHub orgs; reserve repo naming conventions.</td></tr>
+      <tr><td class="k">Maestro v0.1 spec</td><td class="v">Write the interview script, prompt, and the 8 HTML brain-doc templates. Decide which model powers Maestro.</td></tr>
+      <tr><td class="k">Dashboard scaffold</td><td class="v">Stand up the multi-tenant Next.js app with split-screen chat + json-render canvas. Wire magic-link auth.</td></tr>
+      <tr><td class="k">Factory v0</td><td class="v">Bootstrap the Executor + Reviewer pipeline (Sapiom µVM). Doesn't need to build anything in v0.1 since Maestro is hand-coded — but the pipeline exists, ready for Maestro to commission Max as the first hire in v0.2.</td></tr>
+    </table>
+
+
+  </main>
+
+  <aside>
+    <div class="eyebrow">On this page</div>
+    <ol>
+      <li><a href="#north-star">North star</a></li>
+      <li><a href="#layers">The two layers</a></li>
+      <li><a href="#v01">v0.1 — what we build first</a></li>
+      <li><a href="#maestro">Maestro's job</a></li>
+      <li><a href="#brain">The 8-document brain</a></li>
+      <li><a href="#ux">Customer experience</a></li>
+      <li><a href="#storage">Where data lives</a></li>
+      <li><a href="#tool">What a tool actually is</a></li>
+      <li><a href="#roadmap">Hiring roadmap</a></li>
+      <li><a href="#locked">Decisions locked</a></li>
+      <li><a href="#open">What's next</a></li>
+    </ol>
+
+    <div class="divider"></div>
+    <div class="eyebrow">Status</div>
+    <div class="stat"><span>Decisions locked</span><b>27</b></div>
+    <div class="stat"><span>Still open</span><b>0</b></div>
+    <div class="stat"><span>v0.1 scope</span><b>Maestro only</b></div>
+    <div class="stat"><span>First agent hired</span><b>—</b></div>
+  </aside>
+
+</div>
+
+<footer class="site-footer">
+  Part of <a href="https://www.10claws.com/en">10claws</a>
+</footer>
+
+</body>
+</html>
