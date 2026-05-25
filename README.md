@@ -1,69 +1,65 @@
-# alphatwo-ten
+# tenwhy — design docs
 
-> Second design candidate for the **alpha.tenwhy.com** demo, sitting alongside `alpha-ten`.
-> Same product, different codegen backbone: **Sapiom / Blaxel microVM sandbox** + **pluggable coding-agent CLI** + **fallback agent**.
+Three interlinked design documents for the **tenwhy** platform: a software factory + AI workforce for small businesses.
 
-A user submits an app name + short description; the system spins up a Blaxel microVM, runs a coding agent CLI inside it (Cursor / Claude / Codex / Gemini), pushes the result to GitHub, deploys to **Render**, and returns a live URL. All generated apps share a single, multi-tenant **document store API** so a shared link shows the same data to the recipient.
+This is a static site. No build step. No dependencies.
 
-This repo is the **platform** (form/UI + orchestrator API + data API + Postgres schema). The **generated apps' template** lives in [`templates/generated-app`](templates/generated-app) and is the seed the coding agent edits inside the sandbox.
+## Pages
 
-## Start here
-
-| Read | Purpose |
+| Page | What it covers |
 |---|---|
-| [PRD.md](PRD.md) | Full product + technical spec. Source of truth. |
-| [AGENTS.md](AGENTS.md) | How the executing agent should work, including the review protocol. |
-| [tasks/](tasks) | Ordered, atomic, reviewable work units. Execute in numeric order. |
+| [`index.html`](index.html) | **System map** — the whole design. What tenwhy is, the two layers (factory + workforce), Maestro, the 8-document brain, the workforce roster, all locked decisions. |
+| [`factory-map.html`](factory-map.html) | **Factory map** — interactive walkthrough of how the factory builds a tool, stage by stage, with a "Watch a build" animation. |
+| [`stack-map.html`](stack-map.html) | **Stack** — what runs where. Platform columns (Render, Cloudflare, Sapiom, OpenRouter, GitHub), the signup sequence, the first-build flow, the auth/secrets model. |
 
-## Quick stack summary
+Brand mark: [`branding/tenwhy.svg`](branding/tenwhy.svg).
 
-| Layer | Tech |
-|---|---|
-| Frontend (form + status) | Next.js on Render → `alpha.tenwhy.com` |
-| Orchestrator API | Node 20 + Hono on Render → `api.alpha.tenwhy.com` |
-| Multi-tenant data API | Node 20 + Hono on Render → `data.alpha.tenwhy.com` |
-| Database | Single Render Postgres (apps + documents tables) |
-| Sandbox / runtime | **Sapiom Compute** (Blaxel microVM, ephemeral, per-job) |
-| Coding agent (primary) | Pluggable CLI — default **Cursor Composer 2.5** |
-| Coding agent (fallback) | Pluggable CLI — default **Gemini Flash** (`gemini-3.5-flash` via `@google/gemini-cli`) |
-| Supported agents | `cursor` · `claude` · `codex` · `gemini` |
-| Repo host | GitHub user `moeghashim`, one repo per generated app |
-| App hosting | One Render web service per generated app, public URL = `<service>.onrender.com` |
-
-## How `alphatwo-ten` differs from `alpha-ten`
-
-| Concern | `alpha-ten` | `alphatwo-ten` |
-|---|---|---|
-| Sandbox + agent | Cursor SDK Cloud (combined) | Sapiom/Blaxel microVM + agent CLI inside it |
-| Agent choice | Fixed to Cursor Composer 2.5 | Switchable via `CODING_AGENT` / `CODING_MODEL` |
-| Resilience | Single run, fail closed | Primary → fallback (`FALLBACK_AGENT` / `FALLBACK_MODEL`) |
-| Where code is built | Cursor cloud + PR + merge to default branch | Sandbox `npm ci && npm run build`, then `git push` |
-| Render hookup | Auto-deploy on merged PR | Service created via API after first push |
-
-## Switching the coding agent
-
-Set in env (see `.env.example`):
-
-```
-CODING_AGENT=cursor            # cursor | claude | codex | gemini
-CODING_MODEL=composer-2.5
-FALLBACK_AGENT=gemini
-FALLBACK_MODEL=gemini-3.5-flash
-```
-
-Each agent's CLI is invoked headless inside the sandbox with the same system prompt (`PRD.md` §6.1). Only the agent it points at needs a secret (`CURSOR_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`).
-
-## Local dev
-
-```bash
-cp .env.example .env   # fill values
-npm install
-npm run db:init        # runs infra/sql/001_init.sql against $DATABASE_URL
-npm run dev:api        # http://localhost:8787
-npm run dev:data       # http://localhost:8788
-npm run dev:web        # http://localhost:3000
-```
+---
 
 ## Deploy
 
-Deploy via Render Blueprint using [`render.yaml`](render.yaml). DNS: point `alpha`, `api.alpha`, `data.alpha` at the matching Render services.
+The site is plain HTML + one SVG. Push the repo anywhere that serves static files.
+
+### GitHub Pages
+1. Push this repo to GitHub.
+2. **Repo Settings → Pages → Source:** `main` branch, `/ (root)` folder.
+3. Live at `https://<user>.github.io/<repo>/`.
+4. Custom domain: add a `CNAME` file at the repo root containing the domain, and point your DNS `CNAME` record at `<user>.github.io`.
+
+### Cloudflare Pages
+1. Push this repo to GitHub.
+2. **Cloudflare Pages → Create project → Connect to Git → select repo.**
+3. Build settings: leave empty. Root directory: `/`. Build output: `/`.
+4. Live at `https://<project>.pages.dev`. Custom domains via the Cloudflare dashboard.
+
+### Render Static Site
+1. Push this repo to GitHub.
+2. **Render → New → Static Site → connect repo.**
+3. Build command: leave empty. Publish directory: `.`
+4. Live at `https://<service>.onrender.com`.
+
+---
+
+## Local preview
+
+Open `index.html` directly in a browser, **or** serve the folder:
+
+```bash
+python3 -m http.server 8000
+# → http://localhost:8000
+```
+
+---
+
+## Layout
+
+```
+.
+├── index.html           # system map (default page)
+├── factory-map.html     # interactive factory walkthrough
+├── stack-map.html       # tech stack reference
+├── branding/
+│   └── tenwhy.svg       # logo / favicon
+├── README.md            # this file
+└── .gitignore
+```
