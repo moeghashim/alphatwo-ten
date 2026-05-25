@@ -106,7 +106,7 @@
     transition: height 0.6s cubic-bezier(0.65, 0.05, 0.36, 1);
   }
   .canvas.expanded {
-    height: 720px;
+    height: 780px;
   }
 
   /* Spawned company rows (appear during fan-out animation) */
@@ -117,21 +117,17 @@
   .company-label {
     position: absolute;
     font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-    font-size: 10px;
+    font-size: 11px;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--text-dim);
-    text-align: right;
+    letter-spacing: 0.10em;
+    color: var(--clay);
     white-space: nowrap;
-    transform: translateY(-50%);
+    /* center the label horizontally above the Hire+Work row pair */
+    transform: translateX(-50%);
     pointer-events: none;
     opacity: 0;
     animation: tw-fade-in 0.5s ease 0.15s forwards;
-  }
-  .company-label::after {
-    content: " →";
-    color: var(--border-hi);
-    margin-left: 6px;
   }
   @keyframes tw-fade-in {
     to { opacity: 1; }
@@ -390,7 +386,7 @@
       <div class="divider"></div>
       <div>
         <div class="eyebrow">alphatwo-ten · factory map</div>
-        <h1>How a tool gets built<span class="accent">.</span></h1>
+        <h1>How a company gets built<span class="accent">.</span></h1>
       </div>
     </div>
     <div class="controls">
@@ -797,11 +793,11 @@ const playBtn = document.getElementById('play-btn');
 const resetBtn = document.getElementById('reset-btn');
 
 const COMPANIES = [
-  { label: 'plantroom · co'   },   // row 0 — uses the existing Hire/Work cards
-  { label: 'sourdough · club' },   // row 1 — spawned
-  { label: 'wax · supply co'  },   // row 2 — spawned
+  { label: 'Company 1' },          // row 0 — uses the existing Hire/Work cards
+  { label: 'Company 2' },          // row 1 — spawned
+  { label: 'Company 3' },          // row 2 — spawned
 ];
-const ROW_OFFSET = 125;            // vertical gap between spawned company rows
+const ROW_OFFSET = 160;            // vertical gap between spawned company rows
 
 /* ---- Fan-out helpers ---- */
 function expandCanvas()  { document.getElementById('canvas').classList.add('expanded'); }
@@ -821,10 +817,15 @@ function spawnCompanyRow(idx, label) {
   // idx 0 uses the existing cards (just add a label); idx > 0 clones Hire + Work
   const hireMeta = stageById['hire'].meta;
   const workMeta = stageById['work'].meta;
-  const labelX = hireMeta.x - 14;
+  const hireR = rect('hire');
+  const workR = rect('work');
+  // Center the label horizontally over the Hire+Work row span
+  const rowCenterX = (hireR.x + workR.x + workR.w) / 2;
+  const rowY = hireMeta.y + (idx * ROW_OFFSET);
+  const labelY = rowY - 14; // sit just above the row
 
   if (idx === 0) {
-    makeCompanyLabel(label, labelX, hireMeta.y + 48);
+    makeCompanyLabel(label, rowCenterX, labelY);
     return;
   }
 
@@ -850,7 +851,7 @@ function spawnCompanyRow(idx, label) {
 
   cloneOne('hire', hireMeta.y + offsetY, `hire-${idx}`);
   cloneOne('work', workMeta.y + offsetY, `work-${idx}`);
-  makeCompanyLabel(label, labelX, hireMeta.y + offsetY + 48);
+  makeCompanyLabel(label, rowCenterX, labelY);
 }
 
 function createExtraPacket() {
@@ -868,6 +869,45 @@ function cleanupFanout() {
   Object.keys(stageById).forEach(k => {
     if (/^(hire|work)-\d+$/.test(k)) delete stageById[k];
   });
+}
+
+/* Keep the active stage in the viewport — horizontally scrolls the
+   canvas-wrap only (no vertical page scroll). Custom rAF-driven scroll
+   so each pan runs longer than the wait between waypoints, giving a
+   continuous rightward camera-follow feel rather than discrete shifts. */
+let _scrollRAF = null;
+function keepInView(target) {
+  const el = (typeof target === 'string') ? stageById[target]?.el : target;
+  if (!el) return;
+  const wrap = document.querySelector('.canvas-wrap');
+  if (!wrap) return;
+
+  const elRect = el.getBoundingClientRect();
+  const wrapRect = wrap.getBoundingClientRect();
+  const cardLeftInContent  = (elRect.left - wrapRect.left) + wrap.scrollLeft;
+  const cardCenterInContent = cardLeftInContent + (elRect.width / 2);
+  const desired = cardCenterInContent - (wrap.clientWidth / 2);
+  const maxScroll = Math.max(0, wrap.scrollWidth - wrap.clientWidth);
+  const finalX = Math.max(0, Math.min(maxScroll, desired));
+
+  // Cancel any in-flight scroll and start a new one from current position.
+  if (_scrollRAF) cancelAnimationFrame(_scrollRAF);
+  const startX = wrap.scrollLeft;
+  if (Math.abs(finalX - startX) < 1) return;
+
+  // Duration > waypoint interval (1100ms) so successive calls overlap
+  // and the scroll never decelerates to a full stop between stages.
+  const duration = 1400;
+  const easeOut = (t) => 1 - Math.pow(1 - t, 3);
+  const t0 = performance.now();
+
+  function step(now) {
+    const t = Math.min(1, (now - t0) / duration);
+    wrap.scrollLeft = startX + (finalX - startX) * easeOut(t);
+    if (t < 1) _scrollRAF = requestAnimationFrame(step);
+    else       _scrollRAF = null;
+  }
+  _scrollRAF = requestAnimationFrame(step);
 }
 
 let animating = false;
@@ -895,6 +935,7 @@ async function watchBuild() {
   const first = rect(phase1[0]);
   packet.style.transform = `translate(${first.cx - 7}px, ${first.cy - 7}px)`;
   packet.style.background = 'var(--clay)';
+  keepInView('spec');
   await wait(550);
 
   for (let i = 1; i < phase1.length; i++) {
@@ -908,6 +949,7 @@ async function watchBuild() {
     document.querySelectorAll('.stage').forEach(c => c.classList.remove('pulsing'));
     stageById[id].el.classList.add('pulsing');
     selectStage(id);
+    keepInView(id);
     await wait(1100);
   }
 
@@ -915,6 +957,7 @@ async function watchBuild() {
   expandCanvas();
   COMPANIES.forEach((co, idx) => spawnCompanyRow(idx, co.label));
   await wait(750); // let canvas grow + cards fade in
+  keepInView('hire-1'); // center vertically on the middle row so all 3 are visible
 
   // Materialize extra packets at catalog
   const catalogR = rect('catalog');
@@ -937,6 +980,7 @@ async function watchBuild() {
     stageById[hireId].el.classList.add('pulsing');
   });
   selectStage('hire');
+  keepInView('hire-1'); // middle Hire — horizontally + vertically centers the column
   await wait(1300);
 
   /* ---------- Phase 4: each customer's Work ---------- */
@@ -948,6 +992,7 @@ async function watchBuild() {
     stageById[workId].el.classList.add('pulsing');
   });
   selectStage('work');
+  keepInView('work-1'); // middle Work
   await wait(1700);
 
   /* ---------- Finish (leave spawned rows visible so the final state reads as multi-tenant) ---------- */
