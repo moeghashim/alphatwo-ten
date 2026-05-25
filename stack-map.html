@@ -1,0 +1,707 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>tenwhy — Stack</title>
+<link rel="icon" type="image/svg+xml" href="branding/tenwhy.svg" />
+<style>
+  :root {
+    --bg: #FAF9F5;
+    --bg-2: #F0EEE6;
+    --bg-card: #FFFFFF;
+    --text: #3D3D3A;
+    --text-dim: #87867F;
+    --slate: #141413;
+    --border: #D1CFC5;
+    --border-hi: #B8B5A8;
+    --clay: #D97757;
+    --olive: #788C5D;
+    --sky: #6A8CAF;
+    --red: #B04A3F;
+    --oat: #E3DACC;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: radial-gradient(1200px 800px at 60% -10%, #FBFAF7 0%, var(--bg) 60%);
+    color: var(--text);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+
+  /* Page header */
+  .page-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    position: relative;
+  }
+  .page-header .masthead-logo {
+    display: block;
+    width: 160px;
+    height: auto;
+    margin: 0 auto;
+  }
+  .page-header .nav-link {
+    position: absolute;
+    left: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.10em;
+    color: var(--text-dim);
+    text-decoration: none;
+    padding: 4px 0;
+    transition: color .15s ease;
+  }
+  .page-header .nav-link:hover { color: var(--clay); }
+  @media (max-width: 720px) { .page-header .nav-link { display: none; } }
+
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px 24px 120px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 240px;
+    gap: 48px;
+  }
+  @media (max-width: 960px) {
+    .container { grid-template-columns: 1fr; }
+    aside { order: -1; position: static !important; }
+  }
+
+  h1, h2, h3 {
+    font-family: ui-serif, Georgia, "Times New Roman", serif;
+    color: var(--slate);
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+  h1 { font-size: 36px; margin: 0 0 14px; line-height: 1.2; }
+  h2 { font-size: 24px; margin: 56px 0 14px; }
+  h3 { font-size: 18px; margin: 28px 0 8px; }
+  .eyebrow {
+    font-family: ui-monospace, monospace;
+    font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+  p { margin: 0 0 12px; max-width: 680px; }
+  p.lead { font-size: 17px; max-width: 680px; }
+
+  a { color: var(--clay); text-decoration: none;
+      border-bottom: 1px dotted var(--clay); }
+  a:hover { background: rgba(217,119,87,0.08); }
+
+  code, .mono {
+    font-family: ui-monospace, monospace;
+    font-size: 13px;
+  }
+  code {
+    background: var(--bg-2);
+    padding: 1px 6px;
+    border-radius: 4px;
+    color: var(--slate);
+  }
+
+  /* Pills */
+  .pill {
+    display: inline-block;
+    font-family: ui-monospace, monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 4px;
+    line-height: 1.6;
+    vertical-align: middle;
+  }
+  .pill.always { background: rgba(120,140,93,0.14); color: var(--olive); }
+  .pill.ondemand { background: rgba(217,119,87,0.12); color: var(--clay); }
+  .pill.note { background: var(--bg-2); color: var(--text-dim); }
+
+  /* Panels and tables */
+  .panel {
+    background: var(--bg-card);
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    padding: 22px 26px;
+    margin: 16px 0 8px;
+  }
+  .panel h3 { margin-top: 0; }
+  .panel.tight { padding: 16px 20px; }
+
+  table.kv {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    margin: 14px 0;
+  }
+  table.kv th, table.kv td {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  table.kv th {
+    font-family: ui-monospace, monospace;
+    font-size: 11px; font-weight: 500;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  table.kv td.k {
+    color: var(--text-dim);
+    width: 32%;
+    font-family: ui-monospace, monospace;
+    font-size: 12.5px;
+  }
+  table.kv td.v { color: var(--slate); }
+
+  /* Platform columns diagram */
+  .platforms {
+    background: var(--bg-card);
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    padding: 22px;
+    margin: 18px 0;
+    overflow-x: auto;
+  }
+  .platforms-row {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(170px, 1fr));
+    gap: 14px;
+    min-width: 920px;
+  }
+  .platform {
+    background: #FDFCF9;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 14px 12px;
+  }
+  .platform .ph {
+    font-family: ui-monospace, monospace;
+    font-size: 10.5px;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .platform .ph::before {
+    content: "";
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--border-hi);
+  }
+  .platform.render .ph::before { background: var(--clay); }
+  .platform.cloudflare .ph::before { background: var(--sky); }
+  .platform.sapiom .ph::before { background: var(--olive); }
+  .platform.openrouter .ph::before { background: #8b5cf6; }
+  .platform.github .ph::before { background: var(--slate); }
+  .platform h4 {
+    font-family: ui-serif, Georgia, serif;
+    font-size: 16px;
+    margin: 0 0 10px;
+    color: var(--slate);
+    font-weight: 500;
+  }
+  .platform ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .platform li {
+    padding: 5px 0;
+    color: var(--text);
+    border-bottom: 1px dashed var(--border);
+  }
+  .platform li:last-child { border-bottom: none; }
+  .platform li .tag {
+    display: inline-block;
+    font-family: ui-monospace, monospace;
+    font-size: 9.5px;
+    color: var(--text-dim);
+    background: var(--bg-2);
+    padding: 0 5px;
+    border-radius: 3px;
+    margin-left: 5px;
+    letter-spacing: 0.04em;
+  }
+  .platform li .tag.on  { color: var(--olive); background: rgba(120,140,93,0.10); }
+  .platform li .tag.od  { color: var(--clay);  background: rgba(217,119,87,0.10); }
+  .platforms-third {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--border);
+    display: flex; gap: 14px; flex-wrap: wrap;
+    font-size: 12.5px;
+    color: var(--text-dim);
+  }
+  .platforms-third strong {
+    color: var(--text);
+    font-family: ui-monospace, monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 500;
+  }
+
+  /* Flow lists */
+  ol.flow {
+    list-style: none;
+    counter-reset: step;
+    padding: 0;
+    margin: 16px 0;
+  }
+  ol.flow li {
+    counter-increment: step;
+    position: relative;
+    padding: 12px 0 12px 56px;
+    border-bottom: 1px dashed var(--border);
+  }
+  ol.flow li::before {
+    content: counter(step, upper-roman);
+    position: absolute;
+    left: 0; top: 12px;
+    width: 40px;
+    text-align: right;
+    font-family: ui-mono, monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.06em;
+    padding-top: 3px;
+  }
+  ol.flow li:last-child { border-bottom: none; }
+  ol.flow li b {
+    color: var(--slate);
+    font-family: ui-serif, Georgia, serif;
+    font-size: 16px;
+    font-weight: 500;
+    display: block;
+    margin-bottom: 4px;
+  }
+  ol.flow li .meta {
+    font-family: ui-monospace, monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 4px;
+    display: block;
+  }
+
+  /* Site footer (10claws attribution) */
+  .site-footer {
+    padding: 28px 24px 32px;
+    border-top: 1px solid var(--border);
+    text-align: center;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.10em;
+  }
+  .site-footer a {
+    color: var(--text-dim);
+    text-decoration: none;
+    border-bottom: 1px dotted var(--border-hi);
+  }
+  .site-footer a:hover { color: var(--clay); border-bottom-color: var(--clay); }
+
+  /* Sidebar */
+  aside {
+    position: sticky;
+    top: 32px;
+    align-self: start;
+    background: var(--bg-card);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 18px 14px;
+    font-size: 13.5px;
+  }
+  aside .eyebrow { margin: 0 0 10px; }
+  aside ol { margin: 0; padding: 0 0 0 18px; }
+  aside li { margin: 5px 0; line-height: 1.45; }
+  aside li a { color: var(--text); border-bottom: none; }
+  aside li a:hover { color: var(--clay); }
+  aside .divider {
+    border-top: 1px solid var(--border);
+    margin: 12px -18px;
+  }
+  aside .legend {
+    font-size: 12.5px; color: var(--text-dim);
+    line-height: 1.6;
+  }
+  aside .legend .row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 3px 0;
+  }
+  aside .legend i {
+    width: 8px; height: 8px; border-radius: 50%; display: inline-block;
+  }
+</style>
+</head>
+<body>
+<header class="page-header">
+  <a href="index.html" class="nav-link">←  System map</a>
+  <svg class="masthead-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 45.4" role="img" aria-label="tenwhy">
+    <path fill="#161615" d="m16 13.9h-6v-7.2h-0.3c-1.7 1.9-4.2 2.9-4.8 3.4-0.3 0.2-0.2 0.2-0.2 0.9v2.8h-3c-0.2 0.1-0.4 0.2-0.4 0.5v1.7c0 0.3 0.2 0.5 0.4 0.5 1.5 0 3.1 0.3 3.1 3.7v9.6c0 4 1.6 5.8 4.3 5.8 2.6 0.2 5.5-1.3 7-2.2l0.5-0.3c0.2-0.1 0.2-0.3 0.1-0.6l-0.9-1.6c-0.4-0.5-0.8 0-0.8 0l-0.8 0.4c-0.6 0.4-1.5 0.8-2.4 0.8-1.2 0-1.8-0.9-1.8-2.6v-12.6h5.6c0.3 0 0.5-0.1 0.5-0.4v-2.2c0-0.2-0.1-0.4-0.1-0.4z"/>
+    <path fill="#161615" d="m36.4 28.7c-0.3-0.1-0.5 0.3-0.5 0.3-0.9 1.1-2.6 3.1-5.8 3.2-3 0-5.1-1.7-6.3-4.7l12.8-5.4c0.3-2.7-2.7-8.7-8.8-8.7-4.8 0-10.1 2.9-10.1 10.7 0 4.8 3 11.5 11.3 11.5 5.6 0.1 8.2-3.1 9.2-5.5 0.2-0.5-0.3-0.6-0.3-0.6l-1.5-0.8zm-9.8-12c2.3-0.1 3.7 2.2 3.6 4.8l-6.8 3.5c-0.8-3.8-0.2-8.1 3.2-8.3z"/>
+    <path fill="#161615" d="m66.8 32.6c-1.6 0-3.1-0.4-3.1-3.6v-7.7c0-5.7-2.7-7.9-7.2-7.9-4 0-6.1 2.8-7.7 4.8l0.7-5.7c-2.8 1.7-6.5 2.9-9.1 3.2-0.2 0.1-0.3 0.3-0.3 0.5v1.6c0 0.4 0.4 0.4 0.4 0.4 1.4 0.1 2.7 0.9 2.7 4.9v5.5c0 2.6-1.3 4-2.7 4h-0.8c-0.2 0-0.4 0.2-0.4 0.5v1.5c0 0.3 0.2 0.5 0.4 0.5h12.5c0.3 0 0.5-0.2 0.5-0.5v-1.5c0-0.3-0.2-0.5-0.5-0.5h-0.3c-1.3 0-2.8-1.4-2.8-4v-7.7c0.7-2 3.3-4 5.5-4 2.5 0 3.1 1.4 3.1 4.3v7.4c0 3.2-0.9 4-2 4h-0.5c-0.2 0-0.5 0.2-0.5 0.5v1.5c0 0.3 0.2 0.5 0.5 0.5h11.6c0.3 0 0.5-0.2 0.5-0.5v-1.5c0-0.3-0.2-0.5-0.5-0.5z"/>
+    <path fill="#161615" d="m104.4 13.9h-8.1c-0.3 0-0.5 0.1-0.5 0.4v1.6c0 0.3 0.2 0.5 0.5 0.5h1c1 0 1.1 1.1 0.3 2.9l-3.8 9.2-3.8-8.9c-0.9-2.4-0.4-3.2 0.9-3.2h0.6c0.3 0 0.5-0.2 0.5-0.4v-1.7c0-0.2-0.2-0.4-0.4-0.4h-10.6c-0.2 0-0.5 0.1-0.5 0.4v1.6c0 0.3 0.3 0.5 0.5 0.5h0.9c1.2 0 1.4 0.7 0.5 3l-3.7 9-3.5-8.3c-1.2-2.7-0.9-3.7 0.8-3.7 0.3 0 0.5-0.2 0.5-0.4v-1.7c0-0.2-0.2-0.4-0.4-0.4h-9.9c-0.3 0-0.5 0.1-0.5 0.4v1.6c0 0.3 0.2 0.5 0.5 0.5h0.3c1 0 1.6 0.7 2.9 3.7l6.1 14.5c0.1 0.3 0.3 0.5 0.6 0.5h2.5c0.3 0 0.5-0.2 0.6-0.5l5.3-12.9 5.9 12.9c0.1 0.3 0.3 0.5 0.6 0.5h2.6c0.3 0 0.5-0.2 0.6-0.5l7-15.7c1-2.2 1.6-2.5 2.6-2.5h0.5c0.3 0 0.4-0.2 0.4-0.5v-1.6c0-0.2-0.1-0.4-0.3-0.4z"/>
+    <path fill="#161615" d="m132.4 32.6h-0.7c-1.3 0-2.8-1.2-2.8-3.8v-8.4c0-5.1-2.7-7.1-7.1-7.1-3.4 0-5.4 1.9-7.2 4.2v-16.5c0-0.2-0.2-0.1-0.3 0-2.5 1.8-5.6 3.1-8.6 4.3-0.2 0.1-0.2 0.3-0.2 0.5v1.4c0 0.4 0.4 0.5 0.4 0.5 1.7 0 2.6 0.9 2.6 4.4v16.7c0 2.6-1.2 3.8-2.6 3.8h-0.8c-0.3 0-0.5 0.2-0.5 0.5v1.5c0 0.3 0.2 0.5 0.5 0.5h12.8c0.3 0 0.6-0.1 0.6-0.5v-1.5c-0.1-0.7-0.4-0.5-1.1-0.5-1.4 0-2.8-1.4-2.8-3.9v-8.3c0.8-1.8 3.1-3.5 5.3-3.5 2.3 0 3.2 0.9 3.2 4.4v7.3c0 2.8-0.9 4-2.1 4h-0.5c-0.3 0-0.5 0.2-0.5 0.5v1.5c0 0.3 0.2 0.5 0.5 0.5h11.9c0.3 0 0.6-0.1 0.6-0.4v-1.6c0-0.3-0.2-0.5-0.6-0.5z"/>
+    <path fill="#161615" d="m154.1 13.9h-7.9c-0.4 0-0.2 0 0 0-0.3 0-0.5 0.1-0.5 0.4v1.6c0 0.3 0.2 0.5 0.5 0.5h1c1.2 0 1.1 1.2 0.2 3.2l-3.3 7.1-3-6.8c-1.2-2.7-1-3.5 0.6-3.5h0.3c0.2 0 0.4-0.2 0.4-0.4v-1.7c0-0.3-0.2-0.5-0.4-0.5h-10.5c-0.3 0-0.5 0.2-0.5 0.5v1.6c0 0.3 0.2 0.5 0.5 0.5h0.5c0.8 0 1.3 0.3 2.6 3l6.1 12.7-4.9 10c-0.1 0.2 0 0.4 0.2 0.5l2.5 1.2c0.2 0.1 0.6 0 0.7-0.2l11.9-24.6c1.1-2.2 1.7-2.6 2.6-2.6h0.5c0.3 0 0.4-0.2 0.4-0.5v-1.6c0-0.2-0.1-0.4-0.5-0.4z"/>
+    <circle fill="#D76F4D" cx="157.4" cy="33.7" r="1.7"/>
+  </svg>
+</header>
+
+<div class="container">
+  <main>
+    <div class="eyebrow">alphatwo-ten · stack</div>
+    <h1>What we run, where</h1>
+    <p class="lead">
+      The system splits into <strong>always-on per customer</strong> (Maestro is awake, listening,
+      ready to act) and <strong>on-demand</strong> (every specialist spins up a fresh Sapiom µVM
+      when called, tears down after). Five external platforms carry the load. This page is what
+      lives where, why, and how the pieces connect on signup and during the first build.
+    </p>
+
+
+    <h2 id="at-a-glance">1 · At a glance</h2>
+    <p>Five platforms carry the work. Each column shows what runs there.</p>
+
+    <div class="platforms">
+      <div class="platforms-row">
+        <div class="platform render">
+          <div class="ph">RENDER</div>
+          <h4>Long-running services</h4>
+          <ul>
+            <li>Maestro (multi-tenant) <span class="tag on">always</span></li>
+            <li>Dashboard (Next.js) <span class="tag on">always</span></li>
+            <li>Postgres <span class="tag on">always</span></li>
+            <li>Cron Jobs <span class="tag on">always</span></li>
+            <li>Built artifacts <span class="tag on">per app</span></li>
+          </ul>
+        </div>
+        <div class="platform cloudflare">
+          <div class="ph">CLOUDFLARE</div>
+          <h4>Edge + storage + email</h4>
+          <ul>
+            <li>DNS · wildcard cert</li>
+            <li>CDN · DDoS</li>
+            <li>R2 (binary assets) <span class="tag on">always</span></li>
+            <li>Email Service (magic links)</li>
+          </ul>
+        </div>
+        <div class="platform sapiom">
+          <div class="ph">SAPIOM / BLAXEL</div>
+          <h4>µVM compute</h4>
+          <ul>
+            <li>Specialist µVMs <span class="tag od">on demand</span></li>
+            <li>Node-only base image</li>
+            <li>Async webhook back to Maestro</li>
+          </ul>
+        </div>
+        <div class="platform openrouter">
+          <div class="ph">OPENROUTER</div>
+          <h4>LLM gateway</h4>
+          <ul>
+            <li>Claude</li>
+            <li>OpenAI</li>
+            <li>Grok</li>
+            <li>Google</li>
+            <li><em>one key, one bill</em></li>
+          </ul>
+        </div>
+        <div class="platform github">
+          <div class="ph">GITHUB</div>
+          <h4>Source of truth</h4>
+          <ul>
+            <li><code>tenwhy-brains/&lt;cust&gt;</code> · private, per customer</li>
+            <li><code>tenwhy-tools/&lt;name&gt;</code> · one per tool (CLI + Skill)</li>
+            <li>Platform monorepo</li>
+          </ul>
+        </div>
+      </div>
+      <div class="platforms-third">
+        <strong>Third-party services</strong>
+        <span>· <strong>Infisical</strong> — secrets vault (µVMs fetch creds at runtime)</span>
+        <span>· <strong>Sentry</strong> — exceptions</span>
+        <span>· <strong>Better Stack</strong> — logs · uptime · on-call</span>
+      </div>
+    </div>
+
+
+    <h2 id="always-on">2 · Always-on (per customer)</h2>
+    <p>
+      Four things run continuously for every signed-up customer. They are not "spun up on demand" —
+      they're awake all the time, even when the customer is asleep.
+    </p>
+    <table class="kv">
+      <tr><th>Component</th><th>What it does</th><th>Where</th></tr>
+      <tr>
+        <td class="k">Maestro</td>
+        <td class="v">Holds the customer's session. Interviews on first visit. Decides every action
+          the workforce takes. Multi-tenant — one Maestro server hosts every customer's session;
+          state lives in Postgres + brain repo so the server itself is stateless.</td>
+        <td class="v"><span class="pill always">always</span> Render · web service</td>
+      </tr>
+      <tr>
+        <td class="k">Dashboard</td>
+        <td class="v">Next.js. The customer's UI. Renders the chat with Maestro on the left, the
+          generative widget canvas on the right (driven by Maestro's <code>dashboard.json</code> via
+          json-render.dev).</td>
+        <td class="v"><span class="pill always">always</span> Render · web service</td>
+      </tr>
+      <tr>
+        <td class="k">Postgres</td>
+        <td class="v">Sessions, customer accounts, the tool catalog, agent task queues, audit logs.
+          RLS on <code>customer_id</code> (decision #12).</td>
+        <td class="v"><span class="pill always">always</span> Render · managed DB</td>
+      </tr>
+      <tr>
+        <td class="k">Scheduler</td>
+        <td class="v">Cron jobs that fire shift events into Maestro (Lou daily, Ray weekly, Sal
+          24/7, etc.). The scheduler doesn't call specialists directly — it wakes Maestro, who
+          decides.</td>
+        <td class="v"><span class="pill always">always</span> Render · cron jobs</td>
+      </tr>
+    </table>
+
+
+    <h2 id="on-demand">3 · On-demand (the workforce)</h2>
+    <p>
+      Every specialist (Max, Vic, Sac, Jon, Tom, Roy, Moz, Sid, Sal, Ray, Lou, Nic) is dormant by
+      default. When Maestro decides to call one, a fresh Sapiom µVM boots, the tool runs, the µVM
+      tears down. Nothing about the specialist persists between jobs except the artifacts it
+      commits.
+    </p>
+    <div class="panel">
+      <h3 style="margin-top:0">µVM life cycle</h3>
+      <table class="kv" style="margin:0">
+        <tr><th>Phase</th><th>What happens</th></tr>
+        <tr><td class="k">Boot</td><td class="v">Sapiom spawns a Node-only µVM. Base image has Node 20, git, curl, jq. ~1–2 s cold start.</td></tr>
+        <tr><td class="k">Identify</td><td class="v">µVM is started with a short-lived bootstrap token, scoped to one job. Used once, to identify itself to Infisical.</td></tr>
+        <tr><td class="k">Fetch secrets</td><td class="v">µVM hits Infisical with its bootstrap token, pulls exactly the secrets the specific tool needs (e.g. GitHub installation token for the brain repo).</td></tr>
+        <tr><td class="k">Clone tool</td><td class="v"><code>git clone tenwhy-tools/&lt;name&gt;</code>. Loads the Skill into the agent's prompt, makes the CLI runnable.</td></tr>
+        <tr><td class="k">Run</td><td class="v">Specialist works: reads inputs, calls the LLM (via OpenRouter), invokes the CLI, writes outputs.</td></tr>
+        <tr><td class="k">Deliver</td><td class="v">Three output channels (decision recap below): commits to brain repo · publishes to Render · uploads to R2.</td></tr>
+        <tr><td class="k">Webhook</td><td class="v">POSTs result + summary to Maestro's webhook endpoint. Includes a job ID + HMAC signature so Maestro can verify authenticity.</td></tr>
+        <tr><td class="k">Teardown</td><td class="v">µVM exits. Billing stops.</td></tr>
+      </table>
+    </div>
+
+
+    <h2 id="data-stores">4 · Three data stores, one purpose each</h2>
+    <p>Nothing lives in two stores. Each piece of data has exactly one home.</p>
+    <table class="kv">
+      <tr><th>Store</th><th>Contents</th><th>Why here</th></tr>
+      <tr>
+        <td class="k">Render Postgres</td>
+        <td class="v">Customer accounts · sessions · tool catalog · agent task queues · audit log</td>
+        <td class="v">Operational state. Frequent small writes. RLS scoping. Joinable.</td>
+      </tr>
+      <tr>
+        <td class="k">GitHub · <code>tenwhy-brains/&lt;cust&gt;</code></td>
+        <td class="v">The customer's "brain" — 8 HTML docs from Maestro + folders per specialist</td>
+        <td class="v">Portable, versioned for free, clean per-agent commit attribution.</td>
+      </tr>
+      <tr>
+        <td class="k">Cloudflare R2</td>
+        <td class="v">Binary assets — images, video, audio from Vic and other media-shaped tools</td>
+        <td class="v">Cheap storage, zero egress, CDN-backed URLs. Postgres pointers reference the keys.</td>
+      </tr>
+    </table>
+
+
+    <h2 id="signup">5 · The signup sequence</h2>
+    <p>What happens when a brand-new customer hits <code>tenwhy.com</code> and signs up.</p>
+    <ol class="flow">
+      <li>
+        <b>Visitor lands at tenwhy.com</b>
+        Marketing site (static-ish). Submits email to start.
+        <span class="meta">Render web service · cached at Cloudflare edge</span>
+      </li>
+      <li>
+        <b>Magic-link email</b>
+        Custom auth: signed token → store in Postgres with 15-min TTL → send link via Cloudflare Email Service.
+        <span class="meta">Postgres (token) · Cloudflare Email (delivery)</span>
+      </li>
+      <li>
+        <b>Customer clicks link</b>
+        Token verified, session cookie set (HTTP-only). Customer record + slug provisioned. Subdomain claimed: <code>&lt;slug&gt;.tenwhy.com</code>.
+        <span class="meta">Postgres (account) · Cloudflare DNS (wildcard cert)</span>
+      </li>
+      <li>
+        <b>Brain repo created</b>
+        A private repo at <code>tenwhy-brains/&lt;slug&gt;</code> is created via the GitHub API. The customer's GitHub identity is not used; the platform PAT does it.
+        <span class="meta">GitHub API</span>
+      </li>
+      <li>
+        <b>Maestro session opens</b>
+        Customer lands on their dashboard. Maestro greets them, starts the interview. Chat goes to the multi-tenant Maestro service; replies stream back via the OpenRouter gateway.
+        <span class="meta">Render (Maestro · dashboard) · OpenRouter (LLM)</span>
+      </li>
+      <li>
+        <b>Brain begins to fill</b>
+        As the conversation produces facts, Maestro commits HTML documents to <code>/maestro/</code> in the brain repo: <code>business.html</code>, <code>customer.html</code>, etc. The dashboard's right pane re-renders live.
+        <span class="meta">GitHub (commits) · Postgres (dashboard.json) · json-render.dev</span>
+      </li>
+      <li>
+        <b>Interview ends · workforce is empty</b>
+        No specialists exist yet. Maestro proposes hires based on what the customer needs.
+        <span class="meta">Maestro (decision) · Postgres (proposed-hires table)</span>
+      </li>
+    </ol>
+
+
+    <h2 id="first-build">6 · The first build — todo app, end to end</h2>
+    <p>
+      Customer says <em>"I want a todo app."</em> What happens next, from Maestro's first move to a
+      live URL.
+    </p>
+    <ol class="flow">
+      <li>
+        <b>Maestro proposes hiring Nic</b>
+        Posts an Approve card to the dashboard. Customer clicks Approve.
+        <span class="meta">Dashboard · Postgres (hire approval)</span>
+      </li>
+      <li>
+        <b>Maestro fires a µVM</b>
+        POST to Sapiom API: <code>{ tool: "tenwhy-tools/nic", spec: {…}, webhook: "https://maestro.tenwhy.com/v1/jobs/&lt;id&gt;" }</code>. Sapiom returns a job ID immediately. Maestro is free to handle other customers.
+        <span class="meta">Maestro → Sapiom (async)</span>
+      </li>
+      <li>
+        <b>µVM boots and prepares</b>
+        Node base image. Bootstrap token → Infisical → fetches GitHub installation token + Render API key (both scoped, short-lived). Clones <code>tenwhy-tools/nic</code>.
+        <span class="meta">Sapiom (µVM) · Infisical (secrets) · GitHub (clone)</span>
+      </li>
+      <li>
+        <b>Nic builds the app</b>
+        Reads the brain (<code>business.html</code>, <code>audience.html</code>, etc.) for context. Generates a Next.js app via the LLM (OpenRouter). Writes the code to a fresh repo: <code>tenwhy-builds/&lt;cust&gt;-todo-&lt;short&gt;</code>.
+        <span class="meta">OpenRouter (LLM) · GitHub (new build repo)</span>
+      </li>
+      <li>
+        <b>Deploy to Render</b>
+        Nic calls Render's API: create web service from the new repo, set env vars (data API key, slug, etc.), trigger deploy. Render builds + deploys. URL: <code>&lt;cust&gt;-todo-&lt;short&gt;.onrender.com</code>.
+        <span class="meta">Render API (create service) · Render (build + deploy)</span>
+      </li>
+      <li>
+        <b>Nic commits to the brain</b>
+        Updates <code>/nic/builds.html</code> in the brain repo: lists this build, URL, repo, status, timestamp. Updates <code>dashboard.json</code> in Postgres so the dashboard shows a "Your todo app" widget.
+        <span class="meta">GitHub (brain) · Postgres (dashboard.json)</span>
+      </li>
+      <li>
+        <b>Nic webhooks Maestro</b>
+        POSTs <code>{ status: "ok", artifact: { type: "render-service", url: "…" }, log: "…" }</code> to Maestro's webhook. HMAC-signed for verification. µVM exits.
+        <span class="meta">Maestro webhook · µVM teardown</span>
+      </li>
+      <li>
+        <b>Maestro tells the customer</b>
+        Next chat turn: "Your todo app is live at <em>cust-todo-x12.onrender.com</em>." Dashboard widget appears. Done.
+        <span class="meta">Maestro reply · dashboard re-render</span>
+      </li>
+    </ol>
+
+
+    <h2 id="auth-secrets">7 · Auth and secrets — the security model</h2>
+    <p>
+      Two layers: <strong>customer-facing auth</strong> (humans into the dashboard) and
+      <strong>service-to-service auth</strong> (Maestro → Sapiom, µVM → vault, µVM → GitHub/Render).
+    </p>
+    <div class="panel tight">
+      <table class="kv" style="margin:0">
+        <tr><th>Surface</th><th>Mechanism</th></tr>
+        <tr><td class="k">Customer login</td><td class="v">Magic link · token in Postgres (15 min TTL) · email via Cloudflare Email Service · HTTP-only session cookie after click</td></tr>
+        <tr><td class="k">Dashboard API calls</td><td class="v">Session cookie · CSRF token · per-customer rate limit</td></tr>
+        <tr><td class="k">Maestro → Sapiom</td><td class="v">Long-lived Sapiom API key (in Infisical, fetched once at Maestro boot)</td></tr>
+        <tr><td class="k">µVM → Infisical</td><td class="v">Bootstrap token (one-time, per job, injected by Maestro at µVM-create call). µVM exchanges it for scoped secrets.</td></tr>
+        <tr><td class="k">µVM → GitHub</td><td class="v">GitHub App installation token (1 hour TTL, scoped to one repo)</td></tr>
+        <tr><td class="k">µVM → Render API</td><td class="v">Scoped Render API key (in Infisical, granted only when the tool is one that can deploy)</td></tr>
+        <tr><td class="k">µVM → Maestro webhook</td><td class="v">HMAC-SHA256 signed with a per-job secret. Maestro verifies before accepting result.</td></tr>
+        <tr><td class="k">µVM → OpenRouter</td><td class="v">Scoped OpenRouter key with per-job spend limit</td></tr>
+      </table>
+    </div>
+
+
+    <h2 id="decisions">8 · Stack decisions locked in this session</h2>
+    <p>Ten decisions made today — each one a constraint on everything downstream.</p>
+    <table class="kv">
+      <tr><th>#</th><th>Decision</th></tr>
+      <tr><td class="k">S1</td><td class="v">Always-on per customer = Maestro warm + scheduler + DB + dashboard. Specialists on-demand.</td></tr>
+      <tr><td class="k">S2</td><td class="v">Maestro is the only orchestrator. Scheduler fires events into Maestro; Maestro decides whether to wake a specialist.</td></tr>
+      <tr><td class="k">S3</td><td class="v">Three output channels: deployables → Render service per artifact · text/data → brain repo · binaries → Cloudflare R2.</td></tr>
+      <tr><td class="k">S4</td><td class="v">Maestro host = multi-tenant Render service. Stateless; session state in Postgres + brain.</td></tr>
+      <tr><td class="k">S5</td><td class="v">Built artifacts (todo apps, sites, etc.) host = one Render service per artifact. Default URL <code>*.onrender.com</code>; optional custom domain.</td></tr>
+      <tr><td class="k">S6</td><td class="v">Database = Render Postgres (already in the PRD).</td></tr>
+      <tr><td class="k">S7</td><td class="v">Object store = Cloudflare R2.</td></tr>
+      <tr><td class="k">S8</td><td class="v">Scheduler = Render Cron Jobs. Each cron hits a Maestro webhook with a shift signal.</td></tr>
+      <tr><td class="k">S9</td><td class="v">µVM communication = async + webhook. Maestro posts job, µVM hits Maestro webhook when done. HMAC-signed.</td></tr>
+      <tr><td class="k">S10</td><td class="v">Customer auth = custom magic link + Cloudflare Email Service. No third-party auth vendor.</td></tr>
+      <tr><td class="k">S11</td><td class="v">Frontend = Next.js on Render.</td></tr>
+      <tr><td class="k">S12</td><td class="v">LLM gateway = OpenRouter. One key, one bill, four providers (Claude · OpenAI · Grok · Google).</td></tr>
+      <tr><td class="k">S13</td><td class="v">µVM base image = Node-only. All tool CLIs must be Node-based.</td></tr>
+      <tr><td class="k">S14</td><td class="v">Secrets management = Infisical (vault). µVM fetches scoped, short-lived creds at runtime via bootstrap token.</td></tr>
+      <tr><td class="k">S15</td><td class="v">Vault product = Infisical (start managed, option to self-host later).</td></tr>
+      <tr><td class="k">S16</td><td class="v">DNS + CDN + edge = Cloudflare in front of Render. Wildcard cert for <code>*.tenwhy.com</code>.</td></tr>
+      <tr><td class="k">S17</td><td class="v">Observability = Sentry (errors) + Better Stack (logs · uptime · alerts).</td></tr>
+      <tr><td class="k">S18</td><td class="v">URLs = subdomain per customer (<code>&lt;slug&gt;.tenwhy.com</code>) + <code>*.onrender.com</code> per artifact with optional custom-domain wiring.</td></tr>
+    </table>
+
+
+    <h2 id="open">9 · Still open — for a later session</h2>
+    <p>Things we didn't get to. None block starting v0.1.</p>
+    <table class="kv">
+      <tr><th>Area</th><th>Question</th></tr>
+      <tr><td class="k">CI/CD</td><td class="v">Render's GitHub-deploy hook is fine for Maestro/dashboard. Tool repos don't deploy — they get cloned into µVMs. Do we add a GitHub Action that validates tool repos (lint Skill, test CLI) on every push? Probably yes; spec TBD.</td></tr>
+      <tr><td class="k">Backups</td><td class="v">Postgres: Render snapshots are fine. R2: bucket replication. Brain repos: GitHub is already canonical. Disaster recovery drills not specified.</td></tr>
+      <tr><td class="k">Rate limiting</td><td class="v">Cloudflare in front gives basic DDoS. Need a per-customer rate limit on Maestro's webhook + dashboard API. Probably token-bucket in Postgres.</td></tr>
+      <tr><td class="k">Cost ceiling per customer</td><td class="v">A runaway specialist could burn LLM credits or Sapiom µVM hours. Need per-customer monthly cap + alerting (Better Stack).</td></tr>
+    </table>
+  </main>
+
+
+  <aside>
+    <div class="eyebrow">On this page</div>
+    <ol>
+      <li><a href="#at-a-glance">At a glance</a></li>
+      <li><a href="#always-on">Always-on</a></li>
+      <li><a href="#on-demand">On-demand (workforce)</a></li>
+      <li><a href="#data-stores">Three data stores</a></li>
+      <li><a href="#signup">Signup sequence</a></li>
+      <li><a href="#first-build">First build — todo app</a></li>
+      <li><a href="#auth-secrets">Auth and secrets</a></li>
+      <li><a href="#decisions">Stack decisions</a></li>
+      <li><a href="#open">Still open</a></li>
+    </ol>
+
+    <div class="divider"></div>
+
+    <div class="eyebrow">Legend</div>
+    <div class="legend">
+      <div class="row"><i style="background:var(--olive)"></i>always-on</div>
+      <div class="row"><i style="background:var(--clay)"></i>on-demand</div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="eyebrow">Companions</div>
+    <div class="legend">
+      <div class="row"><a href="index.html" style="color:var(--text)">System map</a></div>
+      <div class="row"><a href="factory-map.html" style="color:var(--text)">Factory map</a></div>
+    </div>
+  </aside>
+</div>
+
+<footer class="site-footer">
+  Part of <a href="https://www.10claws.com/en">10claws</a>
+</footer>
+
+</body>
+</html>
