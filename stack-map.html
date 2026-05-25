@@ -106,7 +106,10 @@
     gap: 48px;
   }
   @media (max-width: 960px) {
-    .container { grid-template-columns: 1fr; }
+    /* minmax(0, 1fr) instead of 1fr — without it, the grid falls back
+       to min-content when a child has any intrinsic min-width, and the
+       column overflows the container on narrow viewports. */
+    .container { grid-template-columns: minmax(0, 1fr); }
     aside { order: -1; position: static !important; }
   }
 
