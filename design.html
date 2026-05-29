@@ -770,7 +770,75 @@
 
 
     <!-- =========================================== -->
-    <h2 id="tool">9 · What a tool actually is</h2>
+    <h2 id="contract">9 · The job contract</h2>
+    <p>
+      Maestro fires specialists by sending a structured <strong>request</strong> into the µVM,
+      and the specialist returns a structured <strong>response</strong> via webhook. The wire
+      protocol (Sapiom + HMAC-signed POST) is already locked (decision #9). The
+      <em>shape</em> of the JSON inside it — the cargo — is what this section pins down.
+    </p>
+    <p>
+      Without a fixed schema, every new specialist would force a Maestro code change to parse
+      its outputs. With one, the workforce stays pluggable: any factory-built tool that
+      conforms to the contract slots into Maestro without modification.
+    </p>
+
+    <h3>Request — Maestro → µVM</h3>
+    <p>Passed into the µVM at boot, via Sapiom job env plus a small JSON init file:</p>
+    <table class="kv">
+      <tr><th>Field</th><th>Type</th><th>Notes</th></tr>
+      <tr><td class="k"><code>job_id</code></td><td class="v">uuid</td><td class="v">Unique per fire; matches the row in <code>factory_jobs</code></td></tr>
+      <tr><td class="k"><code>customer_id</code></td><td class="v">uuid</td><td class="v">RLS scope; sets which Infisical secrets the bootstrap token can fetch</td></tr>
+      <tr><td class="k"><code>agent</code></td><td class="v">string</td><td class="v"><code>sac</code>, <code>max</code>, <code>jon</code>… — the specialist persona</td></tr>
+      <tr><td class="k"><code>task</code></td><td class="v">string</td><td class="v">Natural-language brief Maestro composed ("review yesterday's campaigns and adjust bids if ROAS &lt; 1.5")</td></tr>
+      <tr><td class="k"><code>brain_snapshot</code></td><td class="v">object</td><td class="v">Relevant subset of the customer's docs — not the whole brain (token cost matters)</td></tr>
+      <tr><td class="k"><code>constraints</code></td><td class="v">object</td><td class="v"><code>max_runtime_ms</code>, <code>max_llm_tokens</code>, <code>max_spend_usd</code>, allow-listed external endpoints</td></tr>
+      <tr><td class="k"><code>bootstrap_token</code></td><td class="v">string</td><td class="v">Single-use Infisical token; expires 60s after job start</td></tr>
+      <tr><td class="k"><code>webhook_url</code></td><td class="v">url</td><td class="v">Where the µVM POSTs its result</td></tr>
+      <tr><td class="k"><code>hmac_secret_id</code></td><td class="v">string</td><td class="v">Infisical key for the per-job HMAC signing secret</td></tr>
+    </table>
+
+    <h3>Response — µVM → Maestro webhook</h3>
+    <p>POSTed when the job finishes (success, partial, or failure):</p>
+    <table class="kv">
+      <tr><th>Field</th><th>Type</th><th>Notes</th></tr>
+      <tr><td class="k"><code>job_id</code></td><td class="v">uuid</td><td class="v">Mirrors the request</td></tr>
+      <tr><td class="k"><code>agent</code></td><td class="v">string</td><td class="v">Same persona name</td></tr>
+      <tr><td class="k"><code>status</code></td><td class="v">enum</td><td class="v"><code>succeeded</code> / <code>partial</code> / <code>failed</code></td></tr>
+      <tr><td class="k"><code>duration_ms</code></td><td class="v">number</td><td class="v">Total wall-clock time</td></tr>
+      <tr><td class="k"><code>llm_tokens_used</code></td><td class="v">number</td><td class="v">For billing + cost accounting</td></tr>
+      <tr><td class="k"><code>cost_usd</code></td><td class="v">number</td><td class="v">LLM cost + any externally-incurred spend (ads, etc.)</td></tr>
+      <tr><td class="k"><code>actions[]</code></td><td class="v">array</td><td class="v">Each: <code>type</code>, <code>proposal</code> JSON, <code>validation</code> (approved/rejected/reason), <code>executed</code> bool, <code>outcome</code>, <code>audit_path</code> (anchor into history.html)</td></tr>
+      <tr><td class="k"><code>brain_updates[]</code></td><td class="v">array</td><td class="v">File paths + operation (<code>append</code>, <code>edit</code>, <code>create</code>) — for git audit and customer view</td></tr>
+      <tr><td class="k"><code>dashboard_updates[]</code></td><td class="v">array</td><td class="v">Widget IDs to refresh on the customer's dashboard</td></tr>
+      <tr><td class="k"><code>next[]</code></td><td class="v">array</td><td class="v">Optional suggestions for follow-up work — <code>{ agent: "max", brief: "SEO followup on campaign x123 keywords" }</code></td></tr>
+      <tr><td class="k"><code>errors[]</code>, <code>warnings[]</code></td><td class="v">array</td><td class="v">Structured (not free-form strings) so Maestro can categorize</td></tr>
+      <tr><td class="k"><code>signature</code></td><td class="v">string</td><td class="v">HMAC-SHA256 of the body, signed with the per-job secret</td></tr>
+    </table>
+
+    <h3>Why each non-obvious field earns its place</h3>
+    <table class="decisions">
+      <tr><th>Field</th><th>What it unlocks</th></tr>
+      <tr><td class="k"><code>audit_path</code></td><td class="v">The customer dashboard can deep-link from a status card straight to the exact entry in the agent's <code>history.html</code></td></tr>
+      <tr><td class="k"><code>next[]</code></td><td class="v">Self-sequencing workforce: Sac can finish and tell Maestro "now ask Max to look at these keywords" without Maestro hard-coding the Sac → Max relationship</td></tr>
+      <tr><td class="k"><code>dashboard_updates[]</code></td><td class="v">Generative dashboard (json-render) stays in sync without Maestro knowing which widget belongs to which agent</td></tr>
+      <tr><td class="k"><code>brain_updates[]</code></td><td class="v">Maestro can confirm which files moved before declaring the job done; useful for retry logic if a commit failed</td></tr>
+      <tr><td class="k"><code>cost_usd</code></td><td class="v">Per-customer monthly cap gets enforced at Maestro by summing this across jobs (catches the "Still on the grill" cost-runaway item)</td></tr>
+    </table>
+
+    <h3>Enforcement</h3>
+    <p>
+      The <strong>Reviewer</strong> in the factory checks every tool's emitted output against
+      this schema as part of the build, same gate as lint/test failures — a tool that doesn't
+      conform doesn't ship. The schema itself lives in the platform (not duplicated in each tool
+      repo) so it can evolve: tools declare which schema version they target via
+      <code>contract_version</code> in their <code>spec.yaml</code>, and Maestro routes
+      accordingly.
+    </p>
+
+
+    <!-- =========================================== -->
+    <h2 id="tool">10 · What a tool actually is</h2>
     <p>
       A "tool" is the unit of work the factory produces and a specialist consumes. It's
       <strong>not</strong> just an API or a widget — it's a self-contained pair.
@@ -839,7 +907,7 @@
 
 
     <!-- =========================================== -->
-    <h2 id="roadmap">10 · The hiring roadmap</h2>
+    <h2 id="roadmap">11 · The hiring roadmap</h2>
     <p>
       Once Maestro is live, the factory's job is to <strong>build the next specialist's tool</strong>
       and ship it into the catalog. When the customer (or Maestro) decides they need that role,
@@ -888,7 +956,7 @@
 
 
     <!-- =========================================== -->
-    <h2 id="locked">11 · Decisions locked in this grill</h2>
+    <h2 id="locked">12 · Decisions locked in this grill</h2>
     <p>Each one is now a constraint on everything downstream.</p>
     <table class="decisions">
       <tr><th>#</th><th>Decision</th></tr>
@@ -923,7 +991,7 @@
 
 
     <!-- =========================================== -->
-    <h2 id="open">12 · Still on the grill</h2>
+    <h2 id="open">13 · Still on the grill</h2>
     <div class="panel" style="background:rgba(120,140,93,0.08); border-color:rgba(120,140,93,0.35)">
       <p style="margin:0">
         <span class="pill locked">all clear</span> &nbsp;Every question from this session is
@@ -955,6 +1023,7 @@
       <li><a href="#ux">Customer experience</a></li>
       <li><a href="#storage">Where data lives</a></li>
       <li><a href="#audit">Action history &amp; audit</a></li>
+      <li><a href="#contract">The job contract</a></li>
       <li><a href="#tool">What a tool actually is</a></li>
       <li><a href="#roadmap">Hiring roadmap</a></li>
       <li><a href="#locked">Decisions locked</a></li>
