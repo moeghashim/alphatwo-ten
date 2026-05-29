@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>tenwhy — Build</title>
+<link rel="icon" type="image/svg+xml" href="branding/tenwhy.svg" />
+<style>
+  :root {
+    --bg: #FAF9F5;
+    --bg-2: #F0EEE6;
+    --bg-card: #FFFFFF;
+    --text: #3D3D3A;
+    --text-dim: #87867F;
+    --slate: #141413;
+    --border: #D1CFC5;
+    --border-hi: #B8B5A8;
+    --clay: #D97757;
+    --olive: #788C5D;
+    --sky: #6A8CAF;
+    --red: #B04A3F;
+    --oat: #E3DACC;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: radial-gradient(1200px 800px at 60% -10%, #FBFAF7 0%, var(--bg) 60%);
+    color: var(--text);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+
+  /* Page header */
+  .page-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    position: relative;
+  }
+  .page-header .masthead-logo { display: block; width: 160px; height: auto; margin: 0 auto; }
+  .page-header .nav-link {
+    position: absolute; left: 24px; top: 50%; transform: translateY(-50%);
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.10em;
+    color: var(--text-dim); text-decoration: none; padding: 4px 0;
+    transition: color .15s ease;
+  }
+  .page-header .nav-link:hover { color: var(--clay); }
+  @media (max-width: 720px) { .page-header .nav-link { display: none; } }
+
+  /* ---------- Mobile ---------- */
+  @media (max-width: 640px) {
+    .container { padding: 24px 16px 80px; gap: 28px; }
+    h1 { font-size: 28px; }
+    h2 { font-size: 21px; margin: 40px 0 12px; }
+    h3 { font-size: 16px; margin: 22px 0 6px; }
+    p, p.lead { font-size: 15px; max-width: none; }
+    .page-header { padding: 14px 16px; }
+    .page-header .masthead-logo { width: 120px; }
+    code, .mono { word-break: break-word; overflow-wrap: anywhere; }
+    .panel { padding: 16px 18px; }
+    .panel.tight { padding: 12px 14px; }
+    table.kv, table.tri { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; font-size: 13px; }
+    table.kv th, table.kv td, table.tri th, table.tri td { padding: 8px 10px; }
+    table.kv td.k { width: auto; min-width: 90px; }
+    ol.flow li { padding: 12px 0 12px 36px; }
+    ol.flow li::before { width: 26px; }
+    aside { padding: 14px 16px; }
+    aside h2 { font-size: 18px; }
+    aside .divider { margin: 12px 0; }
+    pre.code { font-size: 11px; }
+    .site-footer { padding: 22px 16px 24px; font-size: 10px; }
+  }
+
+  .container {
+    max-width: 1100px; margin: 0 auto; padding: 40px 24px 120px;
+    display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: 48px;
+  }
+  @media (max-width: 960px) {
+    .container { grid-template-columns: minmax(0, 1fr); }
+    aside { order: -1; position: static !important; }
+  }
+
+  h1, h2, h3 {
+    font-family: ui-serif, Georgia, "Times New Roman", serif;
+    color: var(--slate); font-weight: 500; letter-spacing: -0.01em;
+  }
+  h1 { font-size: 36px; margin: 0 0 14px; line-height: 1.2; }
+  h2 { font-size: 24px; margin: 56px 0 14px; }
+  h3 { font-size: 18px; margin: 28px 0 8px; }
+  .eyebrow {
+    font-family: ui-monospace, monospace; font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--text-dim); margin-bottom: 8px;
+  }
+  p { margin: 0 0 12px; max-width: 680px; }
+  p.lead { font-size: 17px; max-width: 680px; }
+
+  a { color: var(--clay); text-decoration: none; border-bottom: 1px dotted var(--clay); }
+  a:hover { background: rgba(217,119,87,0.08); }
+
+  code, .mono { font-family: ui-monospace, monospace; font-size: 13px; }
+  code { background: var(--bg-2); padding: 1px 6px; border-radius: 4px; color: var(--slate); }
+
+  pre.code {
+    background: var(--slate); color: #E7E5DE;
+    border-radius: 12px; padding: 18px 20px; overflow-x: auto;
+    font-family: ui-monospace, monospace; font-size: 12.5px; line-height: 1.6;
+    margin: 16px 0;
+  }
+  pre.code .c { color: #87867F; }      /* comment */
+  pre.code .k { color: #E0A989; }      /* clay-ish keyword */
+  pre.code .g { color: #9DB87F; }      /* olive-ish ok */
+
+  /* Pills */
+  .pill {
+    display: inline-block; font-family: ui-monospace, monospace; font-size: 10.5px;
+    letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 8px;
+    border-radius: 4px; line-height: 1.6; vertical-align: middle;
+  }
+  .pill.mvp   { background: rgba(217,119,87,0.12); color: var(--clay); }
+  .pill.later { background: var(--bg-2); color: var(--text-dim); }
+  .pill.verify{ background: rgba(176,74,63,0.10); color: var(--red); }
+  .pill.done  { background: rgba(120,140,93,0.14); color: var(--olive); }
+
+  /* Panels and tables */
+  .panel {
+    background: var(--bg-card); border: 1.5px solid var(--border);
+    border-radius: 14px; padding: 22px 26px; margin: 16px 0 8px;
+  }
+  .panel h3 { margin-top: 0; }
+  .panel.tight { padding: 16px 20px; }
+  .panel.warm { border-color: rgba(217,119,87,0.35); background: #FDFCF9; }
+
+  table.kv, table.tri { width: 100%; border-collapse: collapse; font-size: 14px; margin: 14px 0; }
+  table.kv th, table.kv td, table.tri th, table.tri td {
+    text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top;
+  }
+  table.kv th, table.tri th {
+    font-family: ui-monospace, monospace; font-size: 11px; font-weight: 500;
+    color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  table.kv td.k { color: var(--text-dim); width: 32%; font-family: ui-monospace, monospace; font-size: 12.5px; }
+  table.kv td.v { color: var(--slate); }
+  /* three-column comparison: layer | impl1 | impl2 */
+  table.tri td.layer { color: var(--text-dim); font-family: ui-monospace, monospace; font-size: 12px; width: 24%; }
+  table.tri td.i1 { color: var(--slate); width: 38%; }
+  table.tri td.i2 { color: var(--slate); width: 38%; }
+  table.tri th.h1 { color: var(--clay); }
+  table.tri th.h2 { color: var(--sky); }
+  table.tri tr.same td.i1, table.tri tr.same td.i2 { color: var(--text-dim); }
+
+  /* Flow lists */
+  ol.flow { list-style: none; counter-reset: step; padding: 0; margin: 16px 0; }
+  ol.flow li {
+    counter-increment: step; position: relative;
+    padding: 12px 0 12px 56px; border-bottom: 1px dashed var(--border);
+  }
+  ol.flow li::before {
+    content: counter(step, upper-roman); position: absolute; left: 0; top: 12px; width: 40px;
+    text-align: right; font-family: ui-monospace, monospace; font-size: 11px;
+    color: var(--text-dim); letter-spacing: 0.06em; padding-top: 3px;
+  }
+  ol.flow li:last-child { border-bottom: none; }
+  ol.flow li b {
+    color: var(--slate); font-family: ui-serif, Georgia, serif; font-size: 16px;
+    font-weight: 500; display: block; margin-bottom: 4px;
+  }
+  ol.flow li .meta {
+    font-family: ui-monospace, monospace; font-size: 11px; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 0.05em; margin-top: 4px; display: block;
+  }
+
+  /* Phase list */
+  ol.phases { list-style: none; counter-reset: ph; padding: 0; margin: 16px 0; }
+  ol.phases > li {
+    counter-increment: ph; position: relative; padding: 14px 0 14px 64px;
+    border-bottom: 1px solid var(--border);
+  }
+  ol.phases > li:last-child { border-bottom: none; }
+  ol.phases > li::before {
+    content: "P" counter(ph); position: absolute; left: 0; top: 14px;
+    width: 46px; text-align: center; font-family: ui-monospace, monospace; font-size: 12px;
+    font-weight: 600; color: var(--clay); background: rgba(217,119,87,0.10);
+    border-radius: 6px; padding: 3px 0;
+  }
+  ol.phases > li b {
+    color: var(--slate); font-family: ui-serif, Georgia, serif; font-size: 17px;
+    font-weight: 500; display: block; margin-bottom: 4px;
+  }
+  ol.phases > li .both {
+    font-family: ui-monospace, monospace; font-size: 10.5px; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 0.06em; margin-top: 6px; display: block;
+  }
+
+  /* Site footer */
+  .site-footer {
+    padding: 28px 24px 32px; border-top: 1px solid var(--border); text-align: center;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 11px;
+    color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.10em;
+  }
+  .site-footer a { color: var(--text-dim); text-decoration: none; border-bottom: 1px dotted var(--border-hi); }
+  .site-footer a:hover { color: var(--clay); border-bottom-color: var(--clay); }
+
+  /* Sidebar */
+  aside {
+    position: sticky; top: 32px; align-self: start; background: var(--bg-card);
+    border: 1.5px solid var(--border); border-radius: 12px; padding: 18px 18px 14px; font-size: 13.5px;
+  }
+  aside .eyebrow { margin: 0 0 10px; }
+  aside ol { margin: 0; padding: 0 0 0 18px; }
+  aside li { margin: 5px 0; line-height: 1.45; }
+  aside li a { color: var(--text); border-bottom: none; }
+  aside li a:hover { color: var(--clay); }
+  aside .divider { border-top: 1px solid var(--border); margin: 12px -18px; }
+  aside .legend { font-size: 12.5px; color: var(--text-dim); line-height: 1.6; }
+  aside .legend .row { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
+</style>
+</head>
+<body>
+<header class="page-header">
+  <a href="stack-map.html" class="nav-link">←  Stack</a>
+  <a href="index.html" title="tenwhy — home" aria-label="tenwhy — home"><svg class="masthead-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 45.4" role="img" aria-label="tenwhy">
+    <path fill="#161615" d="m16 13.9h-6v-7.2h-0.3c-1.7 1.9-4.2 2.9-4.8 3.4-0.3 0.2-0.2 0.2-0.2 0.9v2.8h-3c-0.2 0.1-0.4 0.2-0.4 0.5v1.7c0 0.3 0.2 0.5 0.4 0.5 1.5 0 3.1 0.3 3.1 3.7v9.6c0 4 1.6 5.8 4.3 5.8 2.6 0.2 5.5-1.3 7-2.2l0.5-0.3c0.2-0.1 0.2-0.3 0.1-0.6l-0.9-1.6c-0.4-0.5-0.8 0-0.8 0l-0.8 0.4c-0.6 0.4-1.5 0.8-2.4 0.8-1.2 0-1.8-0.9-1.8-2.6v-12.6h5.6c0.3 0 0.5-0.1 0.5-0.4v-2.2c0-0.2-0.1-0.4-0.1-0.4z"/>
+    <path fill="#161615" d="m36.4 28.7c-0.3-0.1-0.5 0.3-0.5 0.3-0.9 1.1-2.6 3.1-5.8 3.2-3 0-5.1-1.7-6.3-4.7l12.8-5.4c0.3-2.7-2.7-8.7-8.8-8.7-4.8 0-10.1 2.9-10.1 10.7 0 4.8 3 11.5 11.3 11.5 5.6 0.1 8.2-3.1 9.2-5.5 0.2-0.5-0.3-0.6-0.3-0.6l-1.5-0.8zm-9.8-12c2.3-0.1 3.7 2.2 3.6 4.8l-6.8 3.5c-0.8-3.8-0.2-8.1 3.2-8.3z"/>
+    <path fill="#161615" d="m66.8 32.6c-1.6 0-3.1-0.4-3.1-3.6v-7.7c0-5.7-2.7-7.9-7.2-7.9-4 0-6.1 2.8-7.7 4.8l0.7-5.7c-2.8 1.7-6.5 2.9-9.1 3.2-0.2 0.1-0.3 0.3-0.3 0.5v1.6c0 0.4 0.4 0.4 0.4 0.4 1.4 0.1 2.7 0.9 2.7 4.9v5.5c0 2.6-1.3 4-2.7 4h-0.8c-0.2 0-0.4 0.2-0.4 0.5v1.5c0 0.3 0.2 0.5 0.4 0.5h12.5c0.3 0 0.5-0.2 0.5-0.5v-1.5c0-0.3-0.2-0.5-0.5-0.5h-0.3c-1.3 0-2.8-1.4-2.8-4v-7.7c0.7-2 3.3-4 5.5-4 2.5 0 3.1 1.4 3.1 4.3v7.4c0 3.2-0.9 4-2 4h-0.5c-0.2 0-0.5 0.2-0.5 0.5v1.5c0 0.3 0.2 0.5 0.5 0.5h11.6c0.3 0 0.5-0.2 0.5-0.5v-1.5c0-0.3-0.2-0.5-0.5-0.5z"/>
+    <path fill="#161615" d="m104.4 13.9h-8.1c-0.3 0-0.5 0.1-0.5 0.4v1.6c0 0.3 0.2 0.5 0.5 0.5h1c1 0 1.1 1.1 0.3 2.9l-3.8 9.2-3.8-8.9c-0.9-2.4-0.4-3.2 0.9-3.2h0.6c0.3 0 0.5-0.2 0.5-0.4v-1.7c0-0.2-0.2-0.4-0.4-0.4h-10.6c-0.2 0-0.5 0.1-0.5 0.4v1.6c0 0.3 0.3 0.5 0.5 0.5h0.9c1.2 0 1.4 0.7 0.5 3l-3.7 9-3.5-8.3c-1.2-2.7-0.9-3.7 0.8-3.7 0.3 0 0.5-0.2 0.5-0.4v-1.7c0-0.2-0.2-0.4-0.4-0.4h-9.9c-0.3 0-0.5 0.1-0.5 0.4v1.6c0 0.3 0.2 0.5 0.5 0.5h0.3c1 0 1.6 0.7 2.9 3.7l6.1 14.5c0.1 0.3 0.3 0.5 0.6 0.5h2.5c0.3 0 0.5-0.2 0.6-0.5l5.3-12.9 5.9 12.9c0.1 0.3 0.3 0.5 0.6 0.5h2.6c0.3 0 0.5-0.2 0.6-0.5l7-15.7c1-2.2 1.6-2.5 2.6-2.5h0.5c0.3 0 0.4-0.2 0.4-0.5v-1.6c0-0.2-0.1-0.4-0.3-0.4z"/>
+    <path fill="#161615" d="m132.4 32.6h-0.7c-1.3 0-2.8-1.2-2.8-3.8v-8.4c0-5.1-2.7-7.1-7.1-7.1-3.4 0-5.4 1.9-7.2 4.2v-16.5c0-0.2-0.2-0.1-0.3 0-2.5 1.8-5.6 3.1-8.6 4.3-0.2 0.1-0.2 0.3-0.2 0.5v1.4c0 0.4 0.4 0.5 0.4 0.5 1.7 0 2.6 0.9 2.6 4.4v16.7c0 2.6-1.2 3.8-2.6 3.8h-0.8c-0.3 0-0.5 0.2-0.5 0.5v1.5c0 0.3 0.2 0.5 0.5 0.5h12.8c0.3 0 0.6-0.1 0.6-0.5v-1.5c-0.1-0.7-0.4-0.5-1.1-0.5-1.4 0-2.8-1.4-2.8-3.9v-8.3c0.8-1.8 3.1-3.5 5.3-3.5 2.3 0 3.2 0.9 3.2 4.4v7.3c0 2.8-0.9 4-2.1 4h-0.5c-0.3 0-0.5 0.2-0.5 0.5v1.5c0 0.3 0.2 0.5 0.5 0.5h11.9c0.3 0 0.6-0.1 0.6-0.4v-1.6c0-0.3-0.2-0.5-0.6-0.5z"/>
+    <path fill="#161615" d="m154.1 13.9h-7.9c-0.4 0-0.2 0 0 0-0.3 0-0.5 0.1-0.5 0.4v1.6c0 0.3 0.2 0.5 0.5 0.5h1c1.2 0 1.1 1.2 0.2 3.2l-3.3 7.1-3-6.8c-1.2-2.7-1-3.5 0.6-3.5h0.3c0.2 0 0.4-0.2 0.4-0.4v-1.7c0-0.3-0.2-0.5-0.4-0.5h-10.5c-0.3 0-0.5 0.2-0.5 0.5v1.6c0 0.3 0.2 0.5 0.5 0.5h0.5c0.8 0 1.3 0.3 2.6 3l6.1 12.7-4.9 10c-0.1 0.2 0 0.4 0.2 0.5l2.5 1.2c0.2 0.1 0.6 0 0.7-0.2l11.9-24.6c1.1-2.2 1.7-2.6 2.6-2.6h0.5c0.3 0 0.4-0.2 0.4-0.5v-1.6c0-0.2-0.1-0.4-0.5-0.4z"/>
+    <circle fill="#D76F4D" cx="157.4" cy="33.7" r="1.7"/>
+  </svg></a>
+</header>
+
+<div class="container">
+  <main>
+    <div class="eyebrow">tenwhy · the build plan</div>
+    <h1>Two implementations, one architecture</h1>
+    <p class="lead">
+      We build tenwhy <strong>twice, in parallel</strong>. Implementation 1 wires every vendor by
+      hand. Implementation 2 provisions the same vendors through the
+      <a href="https://docs.stripe.com/projects">Stripe Projects</a> ecosystem. The application
+      code is <em>identical</em> between them — only the provisioning, credentials, and billing
+      plane differs. Running both at once is the truest test that the architecture is portable and
+      not accidentally welded to one set of vendors.
+    </p>
+
+
+    <!-- =========================================== -->
+    <h2 id="principle">1 · The principle — the <code>.env</code> is the seam</h2>
+    <p>
+      Maestro, the specialists, the job contract, the brain client — none of them know which
+      implementation they're running in. They read <code>DATABASE_URL</code>,
+      <code>OPENROUTER_API_KEY</code>, <code>SANDBOX_API_KEY</code>, etc. from the environment.
+      <strong>The only difference between Impl 1 and Impl 2 is how those values land in
+      <code>.env</code>.</strong>
+    </p>
+    <table class="tri">
+      <tr><th class="layer">Step</th><th class="h1">Impl 1 · hand-wired</th><th class="h2">Impl 2 · Stripe Projects</th></tr>
+      <tr>
+        <td class="layer">get a Postgres</td>
+        <td class="i1">create it in the Neon/Render dashboard, copy <code>DATABASE_URL</code> into <code>.env</code></td>
+        <td class="i2"><code>stripe projects add neon/postgres</code> → <code>stripe projects env --pull</code></td>
+      </tr>
+      <tr>
+        <td class="layer">get an LLM key</td>
+        <td class="i1">paste OpenRouter key into <code>.env</code></td>
+        <td class="i2"><code>stripe projects add openrouter</code> → <code>env --pull</code></td>
+      </tr>
+      <tr>
+        <td class="layer">get a sandbox</td>
+        <td class="i1">Sapiom/Blaxel API key into <code>.env</code></td>
+        <td class="i2"><code>stripe projects add daytona</code> → <code>env --pull</code></td>
+      </tr>
+    </table>
+    <p>
+      The app reads the same variable names either way. That makes the two implementations a
+      controlled A/B: same code, two provenances.
+    </p>
+
+
+    <!-- =========================================== -->
+    <h2 id="loop">2 · The proving loop (MVP)</h2>
+    <p>
+      The smallest thing that exercises the whole architecture: one task, one orchestrator, one
+      specialist, one structured round trip, one durable audit. If this loop is green on both
+      implementations, scaling to the full workforce is mechanical.
+    </p>
+    <ol class="flow">
+      <li>
+        <b>A task arrives</b>
+        Customer types a request into a form (or curl). For the MVP there's one hard-coded test customer.
+        <span class="meta">web form / CLI → Maestro</span>
+      </li>
+      <li>
+        <b>Maestro reasons</b>
+        Maestro (LLM) reads the relevant brain docs, composes a brief, and decides to fire Jon (catalog).
+        <span class="meta">Maestro · OpenRouter · reads brain via GitHub API</span>
+      </li>
+      <li>
+        <b>Jon runs</b>
+        Jon receives the job-contract request, reasons over the brief + brain snapshot (LLM), and emits a structured proposal — no external API in the MVP, just catalog reasoning.
+        <span class="meta">specialist · OpenRouter · job contract v0 in</span>
+      </li>
+      <li>
+        <b>Jon returns the contract</b>
+        Jon emits job-contract <strong>response</strong> JSON: <code>status</code>, <code>actions[]</code>, <code>brain_updates[]</code>, <code>cost_usd</code>, etc.
+        <span class="meta">µVM → Maestro · HMAC-signed</span>
+      </li>
+      <li>
+        <b>Maestro persists</b>
+        Maestro validates the contract, writes a row to <code>action_log</code>, and appends an entry to <code>/jon/history.html</code> in the brain repo.
+        <span class="meta">Postgres + GitHub commit</span>
+      </li>
+      <li>
+        <b>Customer sees the result</b>
+        A plain HTML page renders the brain + the action log. (Generative dashboard comes later.)
+        <span class="meta">static HTML</span>
+      </li>
+    </ol>
+
+    <h3>What the MVP deliberately cuts</h3>
+    <table class="kv">
+      <tr><th>Cut</th><th>Why it's safe to defer</th></tr>
+      <tr><td class="k">The software factory</td><td class="v">Hand-write Jon. Proving the <em>workforce</em> loop matters first; the factory automates tool-building later.</td></tr>
+      <tr><td class="k">11 other specialists</td><td class="v">One specialist proves the contract. The rest are the same shape.</td></tr>
+      <tr><td class="k">Multi-tenancy</td><td class="v">One hard-coded test customer + one seed brain.</td></tr>
+      <tr><td class="k">Generative dashboard</td><td class="v">Plain HTML renders brain + log. json-render comes once the loop is real.</td></tr>
+      <tr><td class="k">Scheduler / shifts</td><td class="v">Jon fires on demand only.</td></tr>
+      <tr><td class="k">Real auth</td><td class="v">Single hard-coded session for the MVP.</td></tr>
+      <tr><td class="k">Scraping</td><td class="v">Jon (catalog) doesn't scrape. The scraping service arrives with Max (SEO).</td></tr>
+    </table>
+    <p>
+      <span class="pill mvp">kept in MVP</span> &nbsp;Maestro <strong>does</strong> use an LLM from
+      the start — it reads the brain, composes the brief, and decides. Even with one specialist,
+      Maestro is a real orchestrator, not a dumb router.
+    </p>
+
+
+    <!-- =========================================== -->
+    <h2 id="map">3 · Component map — Impl 1 vs Impl 2</h2>
+    <p>
+      Rows marked <span style="color:var(--text-dim)">muted</span> are identical across both. The
+      colored rows are where the two implementations genuinely diverge.
+    </p>
+    <table class="tri">
+      <tr><th class="layer">Layer</th><th class="h1">Impl 1 · hand-wired</th><th class="h2">Impl 2 · Stripe Projects</th></tr>
+      <tr><td class="layer">Maestro host</td><td class="i1">Render web service (manual)</td><td class="i2">Render/Fly via <code>projects add</code></td></tr>
+      <tr><td class="layer">Specialist sandbox</td><td class="i1">Sapiom / Blaxel µVM</td><td class="i2"><strong>Daytona</strong> (&lt;90ms, TS SDK)</td></tr>
+      <tr><td class="layer">Database</td><td class="i1">Render Postgres (manual)</td><td class="i2"><strong>Neon</strong> via <code>projects add</code></td></tr>
+      <tr class="same"><td class="layer">LLM gateway</td><td class="i1">OpenRouter</td><td class="i2">OpenRouter (same vendor)</td></tr>
+      <tr class="same"><td class="layer">Brain repo</td><td class="i1">GitHub (outside Projects)</td><td class="i2">GitHub (outside Projects)</td></tr>
+      <tr><td class="layer">Secrets</td><td class="i1">Infisical</td><td class="i2"><strong>Stripe Secret Store</strong> (built in)</td></tr>
+      <tr><td class="layer">Queue / background</td><td class="i1">Render Cron</td><td class="i2"><strong>Inngest</strong> via <code>projects add</code></td></tr>
+      <tr class="same"><td class="layer">Object store</td><td class="i1">Cloudflare R2</td><td class="i2">Cloudflare R2 via <code>projects add</code></td></tr>
+      <tr><td class="layer">Auth</td><td class="i1">custom magic link + CF Email</td><td class="i2"><strong>WorkOS</strong> (AuthKit)</td></tr>
+      <tr><td class="layer">Scraping</td><td class="i1"><strong>Scrapling</strong> service (self-hosted, Python + Playwright)</td><td class="i2"><strong>Firecrawl</strong> via <code>projects add</code></td></tr>
+      <tr><td class="layer">Observability</td><td class="i1">Sentry + Better Stack</td><td class="i2">Sentry (catalog) + Better Stack (manual)</td></tr>
+      <tr class="same"><td class="layer">DNS / CDN</td><td class="i1">Cloudflare</td><td class="i2">Cloudflare via <code>projects add</code></td></tr>
+      <tr><td class="layer">Customer billing</td><td class="i1">Stripe API (wired by hand)</td><td class="i2"><strong>native Stripe</strong> (the platform's reason to exist)</td></tr>
+    </table>
+    <p>
+      <span class="pill note" style="background:var(--bg-2);color:var(--text-dim)">note</span>
+      &nbsp;Scraping is a <strong>service behind an HTTP boundary in both</strong> — Scrapling
+      (self-hosted) is the open-source equivalent of Firecrawl (hosted). The Node tool code that
+      calls it is the same; only the base URL + auth change. This keeps the µVM
+      <strong>Node-only</strong> (decision #13) intact — Scrapling's Python stays inside its own
+      service, never inside a tool µVM.
+    </p>
+
+
+    <!-- =========================================== -->
+    <h2 id="seam">4 · The provisioning seam in practice</h2>
+    <p>Same <code>.env</code> shape, two ways to fill it.</p>
+    <pre class="code"><span class="c"># Impl 1 — hand-wired: you paste each value</span>
+DATABASE_URL=postgres://...        <span class="c"># from Neon/Render dashboard</span>
+OPENROUTER_API_KEY=sk-or-...       <span class="c"># from openrouter.ai</span>
+SANDBOX_API_KEY=...                <span class="c"># from Sapiom/Blaxel</span>
+GITHUB_TOKEN=ghp_...               <span class="c"># brain repo PAT</span>
+SCRAPER_URL=https://scrape.internal <span class="c"># self-hosted Scrapling</span>
+
+<span class="c"># Impl 2 — Stripe Projects: provision, then pull</span>
+<span class="k">stripe projects add</span> neon/postgres
+<span class="k">stripe projects add</span> openrouter
+<span class="k">stripe projects add</span> daytona
+<span class="k">stripe projects add</span> firecrawl
+<span class="k">stripe projects env --pull</span>           <span class="g"># writes the same .env keys</span>
+<span class="k">stripe projects billing update</span> --limit 200 --provider daytona</pre>
+    <p>
+      The last line is a real win: per-provider spend caps from one command directly address the
+      cost-runaway item on <a href="design.html#open">the design's "still on the grill" list</a>.
+    </p>
+
+
+    <!-- =========================================== -->
+    <h2 id="repo">5 · Repo layout — one repo, shared code</h2>
+    <p>Single repository. The app is shared; only thin per-implementation provisioning configs differ.</p>
+    <pre class="code">tenwhy/
+├── app/                      <span class="c"># shared — identical across impls</span>
+│   ├── maestro/              <span class="c"># orchestrator (LLM): reads brain, composes brief, fires specialists</span>
+│   ├── specialists/
+│   │   └── jon/              <span class="c"># catalog specialist (MVP); later extracted to tenwhy-tools/</span>
+│   ├── contract/             <span class="c"># job-contract v0 types + validator</span>
+│   ├── brain/                <span class="c"># GitHub brain client (read docs, append history.html)</span>
+│   └── web/                  <span class="c"># MVP: plain HTML render of brain + action_log</span>
+├── infra/
+│   ├── impl1/                <span class="c"># Render blueprint, Sapiom config, Scrapling service</span>
+│   └── impl2/                <span class="c"># .projects/ state, Stripe Projects manifest</span>
+├── seed/
+│   └── brain/                <span class="c"># hand-authored sample brain for the test customer</span>
+└── AGENTS.md                 <span class="c"># orients agents to the doc set + this plan</span></pre>
+
+
+    <!-- =========================================== -->
+    <h2 id="phases">6 · Build phases</h2>
+    <p>Ordered, not timed. Each phase ships on <strong>both</strong> implementations before the next begins — that's what keeps them honest.</p>
+    <ol class="phases">
+      <li>
+        <b>The loop, in-process</b>
+        Maestro + Jon in one process, no sandbox yet. Job contract v0. Postgres <code>action_log</code> + brain <code>history.html</code>. Plain HTML view. Deployed on both.
+        <span class="both">both · proves the round trip</span>
+      </li>
+      <li>
+        <b>Add the sandbox</b>
+        Jon moves into a sandbox — the first real divergence. Impl 1 = Sapiom/Blaxel · Impl 2 = Daytona. Same job-contract wire on both.
+        <span class="both">impl 1: Sapiom · impl 2: Daytona</span>
+      </li>
+      <li>
+        <b>Second specialist + Maestro routing</b>
+        Add Max (SEO) → Maestro now genuinely chooses between specialists. Brings in the scraping service: Scrapling (Impl 1) / Firecrawl (Impl 2).
+        <span class="both">both · Maestro selection logic earns its LLM</span>
+      </li>
+      <li>
+        <b>Generative dashboard</b>
+        Replace the plain HTML view with json-render driven by Maestro's <code>dashboard.json</code>. Wire real auth (WorkOS / magic link).
+        <span class="both">both · customer-facing surface</span>
+      </li>
+      <li>
+        <b>The factory</b>
+        Stand up Executor + Reviewer so new specialists are built, not hand-written. Tools become CLI + Skill repos under <code>tenwhy-tools/</code>.
+        <span class="both">both · the supply side</span>
+      </li>
+      <li>
+        <b>Multi-tenancy + billing</b>
+        Per-customer provisioning, RLS, the hiring flow, and customer billing (native Stripe shines in Impl 2).
+        <span class="both">both · product-ready</span>
+      </li>
+    </ol>
+
+
+    <!-- =========================================== -->
+    <h2 id="verify">7 · Open verification</h2>
+    <p>Not blockers for Phase 1, but needed before Impl 2 hardens.</p>
+    <table class="kv">
+      <tr><th>Item</th><th>Status</th></tr>
+      <tr><td class="k">Daytona sandbox</td><td class="v"><span class="pill done">verified</span> &lt;90ms boot · dedicated kernel/fs/net per sandbox · TypeScript SDK + REST · open-source · ephemeral + snapshot. Strong µVM analog; the TS SDK fits our Node world.</td></tr>
+      <tr><td class="k">Stripe Projects catalog</td><td class="v"><span class="pill verify">needs auth</span> Install <code>stripe plugin install projects</code> + <code>stripe login</code>, then <code>stripe projects catalog</code> to confirm exact service refs (Daytona, Neon, WorkOS, OpenRouter, Firecrawl, Inngest, Sentry).</td></tr>
+      <tr><td class="k">Better Stack in catalog?</td><td class="v"><span class="pill verify">verify</span> If present, it moves inside Projects and the Impl 2 observability asymmetry disappears. If not, it's wired manually (like the GitHub brain).</td></tr>
+      <tr><td class="k">Stripe Projects paid-tier countries</td><td class="v"><span class="pill verify">verify</span> Paid provider provisioning is limited to certain countries — confirm coverage before committing Impl 2 to production.</td></tr>
+    </table>
+    <p>
+      <span class="pill note" style="background:var(--bg-2);color:var(--text-dim)">reminder</span>
+      &nbsp;Stripe Projects is a <strong>provisioning + credential + billing layer</strong>, not a
+      runtime. It never runs Maestro or the agents — it just makes sure the right vendors are
+      provisioned and the right keys are in <code>.env</code>. The architecture in
+      <a href="design.html">the design</a> is unchanged by it.
+    </p>
+  </main>
+
+
+  <aside>
+    <div class="eyebrow">On this page</div>
+    <ol>
+      <li><a href="#principle">The .env seam</a></li>
+      <li><a href="#loop">The proving loop (MVP)</a></li>
+      <li><a href="#map">Component map</a></li>
+      <li><a href="#seam">Provisioning in practice</a></li>
+      <li><a href="#repo">Repo layout</a></li>
+      <li><a href="#phases">Build phases</a></li>
+      <li><a href="#verify">Open verification</a></li>
+    </ol>
+
+    <div class="divider"></div>
+
+    <div class="eyebrow">Implementations</div>
+    <div class="legend">
+      <div class="row"><span style="color:var(--clay)">●</span> Impl 1 — hand-wired</div>
+      <div class="row"><span style="color:var(--sky)">●</span> Impl 2 — Stripe Projects</div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="eyebrow">Companions</div>
+    <div class="legend">
+      <div class="row"><a href="design.html" style="color:var(--text)">The design</a></div>
+      <div class="row"><a href="index.html" style="color:var(--text)">Factory map</a></div>
+      <div class="row"><a href="stack-map.html" style="color:var(--text)">Stack</a></div>
+    </div>
+  </aside>
+</div>
+
+<footer class="site-footer">
+  Part of <a href="https://www.10claws.com/en">10claws</a>
+</footer>
+
+</body>
+</html>
