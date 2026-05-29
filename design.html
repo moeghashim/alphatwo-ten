@@ -688,7 +688,89 @@
 
 
     <!-- =========================================== -->
-    <h2 id="tool">8 · What a tool actually is</h2>
+    <h2 id="audit">8 · Action history &amp; audit</h2>
+    <p>
+      Every external action — Sac lowering a Meta bid, Jon publishing a product, Vic uploading
+      generated media — leaves a durable, customer-readable trail. Three stores hold it, each
+      with its own job:
+    </p>
+
+    <table class="decisions">
+      <tr><th>Store</th><th>What it holds</th><th>Audience</th></tr>
+      <tr>
+        <td class="k">Postgres <code>action_log</code></td>
+        <td class="v">Structured row per action — agent, proposal JSON, validation result, API status, customer_id (RLS-scoped)</td>
+        <td class="v">System queries · analytics · operators</td>
+      </tr>
+      <tr>
+        <td class="k">Better Stack</td>
+        <td class="v">JSON-line stream from every µVM in real time; 30-day retention</td>
+        <td class="v">On-call · debugging · alerting</td>
+      </tr>
+      <tr>
+        <td class="k">Brain repo · per-agent <code>history.html</code></td>
+        <td class="v">Editorial-styled HTML log, append-only via git commits</td>
+        <td class="v"><strong>Customer</strong> · the agent's future runs · third-party auditors</td>
+      </tr>
+    </table>
+
+    <h3>The customer-facing layer</h3>
+    <p>
+      Every department gets its own log, and Maestro aggregates them into a chronological
+      cross-company timeline.
+    </p>
+    <table class="decisions">
+      <tr><th>Path in brain</th><th>Contents</th></tr>
+      <tr><td class="k"><code>/sac/history.html</code></td><td class="v">SEM-only — every bid change, paused campaign, spend decision</td></tr>
+      <tr><td class="k"><code>/max/history.html</code></td><td class="v">SEO-only — keyword moves, on-page edits, ranking checks</td></tr>
+      <tr><td class="k"><code>/jon/history.html</code></td><td class="v">Catalog — product additions, price changes, deletions</td></tr>
+      <tr><td class="k">… one per agent</td><td class="v">Same shape for every specialist in the workforce</td></tr>
+      <tr><td class="k"><code>/maestro/timeline.html</code></td><td class="v">Cross-company chronological feed; one line per action, deep-links into each per-agent log</td></tr>
+    </table>
+
+    <h3>One entry, in detail</h3>
+    <p>Each action becomes a self-contained article appended to the agent's history file:</p>
+    <div class="panel tight">
+      <table class="kv" style="margin:0">
+        <tr><th>Field</th><th>Example</th></tr>
+        <tr><td class="k">Timestamp</td><td class="v">2026-05-29 · 14:32 UTC</td></tr>
+        <tr><td class="k">Agent</td><td class="v">Sac · SEM</td></tr>
+        <tr><td class="k">Action</td><td class="v">Lower bid 10% on campaign-x123</td></tr>
+        <tr><td class="k">Status</td><td class="v">approved · executed</td></tr>
+        <tr><td class="k">Validation</td><td class="v">within $50/day cap · campaign on allow-list</td></tr>
+        <tr><td class="k">Outcome</td><td class="v">Meta API 200 · bid $0.50 → $0.45 · projected −$42/day spend</td></tr>
+        <tr><td class="k">Drilldowns</td><td class="v">raw proposal JSON · API request/response · before/after snapshot (all collapsible)</td></tr>
+      </table>
+    </div>
+
+    <h3>Write flow</h3>
+    <p>
+      The brain commit happens inside the same µVM run that executed the action, alongside the
+      Postgres + Better Stack writes. Maestro's <code>timeline.html</code> is updated when each
+      specialist's outcome webhook fires.
+    </p>
+
+    <h3>Why brain HTML beats Postgres-alone for audit</h3>
+    <table class="decisions">
+      <tr><th>Property</th><th>Postgres</th><th>Brain HTML</th></tr>
+      <tr><td class="k">Customer-readable without infra</td><td class="v">—</td><td class="v">✓ open in any browser</td></tr>
+      <tr><td class="k">Portable</td><td class="v">DB dump required</td><td class="v">✓ <code>git clone</code></td></tr>
+      <tr><td class="k">Cryptographically auditable</td><td class="v">—</td><td class="v">✓ signed git commits</td></tr>
+      <tr><td class="k">Append-only with revision history</td><td class="v">trigger-enforced</td><td class="v">✓ git native</td></tr>
+      <tr><td class="k">Survives platform shutdown</td><td class="v">— (backups only)</td><td class="v">✓ (customer holds the repo)</td></tr>
+    </table>
+
+    <h3>Roll-over</h3>
+    <p>
+      Once an agent's <code>history.html</code> grows past ~500 entries it rolls into monthly
+      archives — <code>/sac/history/2026-05.html</code> — and the active <code>history.html</code>
+      shows the latest month with links back to the archives. The customer experience stays the
+      same; the underlying files just don't grow unbounded.
+    </p>
+
+
+    <!-- =========================================== -->
+    <h2 id="tool">9 · What a tool actually is</h2>
     <p>
       A "tool" is the unit of work the factory produces and a specialist consumes. It's
       <strong>not</strong> just an API or a widget — it's a self-contained pair.
@@ -746,7 +828,7 @@
 
 
     <!-- =========================================== -->
-    <h2 id="roadmap">9 · The hiring roadmap</h2>
+    <h2 id="roadmap">10 · The hiring roadmap</h2>
     <p>
       Once Maestro is live, the factory's job is to <strong>build the next specialist's tool</strong>
       and ship it into the catalog. When the customer (or Maestro) decides they need that role,
@@ -795,7 +877,7 @@
 
 
     <!-- =========================================== -->
-    <h2 id="locked">10 · Decisions locked in this grill</h2>
+    <h2 id="locked">11 · Decisions locked in this grill</h2>
     <p>Each one is now a constraint on everything downstream.</p>
     <table class="decisions">
       <tr><th>#</th><th>Decision</th></tr>
@@ -830,7 +912,7 @@
 
 
     <!-- =========================================== -->
-    <h2 id="open">11 · Still on the grill</h2>
+    <h2 id="open">12 · Still on the grill</h2>
     <div class="panel" style="background:rgba(120,140,93,0.08); border-color:rgba(120,140,93,0.35)">
       <p style="margin:0">
         <span class="pill locked">all clear</span> &nbsp;Every question from this session is
@@ -861,6 +943,7 @@
       <li><a href="#brain">The 8-document brain</a></li>
       <li><a href="#ux">Customer experience</a></li>
       <li><a href="#storage">Where data lives</a></li>
+      <li><a href="#audit">Action history &amp; audit</a></li>
       <li><a href="#tool">What a tool actually is</a></li>
       <li><a href="#roadmap">Hiring roadmap</a></li>
       <li><a href="#locked">Decisions locked</a></li>
