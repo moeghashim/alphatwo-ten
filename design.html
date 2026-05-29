@@ -811,6 +811,17 @@
       agent's folder in the customer's brain repo.
     </p>
 
+    <h3>Bash as a secondary capability</h3>
+    <p>
+      Inside the µVM the specialist also has access to <code>bash</code> for ancillary work:
+      reading downloaded files, running a <code>jq</code> filter on a payload, exploring
+      transient state. Bash is <strong>never</strong> the path to external APIs — every billable
+      action (Meta, Stripe, Render deploys, etc.) goes through the tool's structured CLI so the
+      validator and the audit layer still apply. Think of it the way Claude Code itself ships
+      both <code>Edit</code>/<code>Read</code>/<code>Grep</code> <em>and</em> a <code>Bash</code>
+      tool: structured tools for the hot path, bash for the long tail.
+    </p>
+
     <h3>The factory–workforce wall</h3>
     <div class="panel warm">
       <p style="margin:0 0 8px">
