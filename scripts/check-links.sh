@@ -9,6 +9,7 @@ fail=0
 for page in *.html; do
   while IFS= read -r ref; do
     case "$ref" in http://*|https://*|mailto:*) continue ;; esac
+    case "$ref" in *'${'*) continue ;; esac   # JS template literal, not a real link
 
     path="${ref%%#*}"
     frag=""
