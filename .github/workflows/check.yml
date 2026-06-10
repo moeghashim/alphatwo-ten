@@ -1,0 +1,17 @@
+name: Check links
+
+# Check-only — deployment is handled by Cloudflare Pages' native Git
+# integration; this workflow never deploys anything.
+
+on:
+  push:
+    branches: [main]
+  pull_request: {}
+
+jobs:
+  links:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify local links + anchors
+        run: bash scripts/check-links.sh
