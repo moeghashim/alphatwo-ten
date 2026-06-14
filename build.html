@@ -343,6 +343,23 @@
       Maestro is a real orchestrator, not a dumb router.
     </p>
 
+    <h3>What the MVP must prove — the failure paths</h3>
+    <p>
+      The happy-path round trip is the easy half. The MVP isn't green until it survives the
+      failures the durable layer exists for (<a href="design.html#orchestration">design §11</a>) —
+      these are test cases, not afterthoughts:
+    </p>
+    <table class="kv">
+      <tr><th>Failure injected</th><th>Required behaviour</th></tr>
+      <tr><td class="k">Job retried</td><td class="v">Re-running re-applies nothing already landed — idempotency-key check against the <code>action_items</code> ledger.</td></tr>
+      <tr><td class="k">Duplicate webhook</td><td class="v">A re-delivered result is a no-op — inbox dedupe on <code>unique(job_id, event, external_id)</code>.</td></tr>
+      <tr><td class="k">Lost webhook</td><td class="v">Reconciliation reads external truth back and closes the job; no effect lost or double-counted.</td></tr>
+      <tr><td class="k">Crash before external apply</td><td class="v">Job resumes from <code>applying</code>; nothing executed, so it executes cleanly.</td></tr>
+      <tr><td class="k">Crash after apply, before record</td><td class="v">Reconciliation finds the landed effect and finalizes the record — the hardest case, and the reason the ledger exists.</td></tr>
+      <tr><td class="k">Projection rebuild</td><td class="v">A query-hot projection can be dropped and rebuilt from <code>results</code> with identical output.</td></tr>
+      <tr><td class="k">Brain-commit validation</td><td class="v">A malformed proposed brain update is rejected at finalize; the canonical record is platform-rendered, not tool-written.</td></tr>
+    </table>
+
 
     <!-- =========================================== -->
     <h2 id="map">3 · Component map — Impl 1 vs Impl 2</h2>
@@ -373,6 +390,14 @@
       calls it is the same; only the base URL + auth change. This keeps the µVM
       <strong>Node-only</strong> (decision #13) intact — Scrapling's Python stays inside its own
       service, never inside a tool µVM.
+    </p>
+    <p>
+      <span class="pill note" style="background:var(--bg-2);color:var(--text-dim)">note</span>
+      &nbsp;The <strong>Queue / background</strong> row is the portability seam to watch. Render
+      Cron (Impl 1) and Inngest (Impl 2) must deliver the <em>same</em> platform events to the
+      <em>same</em> job-state-machine code (<a href="design.html#orchestration">design §11</a>),
+      behind one scheduler/event interface — with a conformance suite both implementations pass.
+      Otherwise the two impls quietly diverge exactly where it's hardest to see.
     </p>
 
 
@@ -464,6 +489,7 @@ SCRAPER_URL=https://scrape.internal <span class="c"># self-hosted Scrapling</spa
       <tr><td class="k">Stripe Projects catalog</td><td class="v"><span class="pill verify">needs auth</span> Install <code>stripe plugin install projects</code> + <code>stripe login</code>, then <code>stripe projects catalog</code> to confirm exact service refs (Daytona, Neon, WorkOS, OpenRouter, Firecrawl, Inngest, Sentry).</td></tr>
       <tr><td class="k">Better Stack in catalog?</td><td class="v"><span class="pill verify">verify</span> If present, it moves inside Projects and the Impl 2 observability asymmetry disappears. If not, it's wired manually (like the GitHub brain).</td></tr>
       <tr><td class="k">Stripe Projects paid-tier countries</td><td class="v"><span class="pill verify">verify</span> Paid provider provisioning is limited to certain countries — confirm coverage before committing Impl 2 to production.</td></tr>
+      <tr><td class="k">Sandbox egress enforcement</td><td class="v"><span class="pill verify">verify</span> Confirm Sapiom <em>and</em> Daytona enforce the job's allow-listed endpoints at the <strong>network layer</strong>. This is the runtime half of the security boundary (<a href="design.html#locked">design</a> decision&nbsp;#32) — if egress isn't network-enforced, "no tool spends money wrongly" has no teeth.</td></tr>
     </table>
     <p>
       <span class="pill note" style="background:var(--bg-2);color:var(--text-dim)">reminder</span>

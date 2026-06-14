@@ -198,6 +198,18 @@
       <a href="stack-map.html">the stack</a>.
     </p>
 
+    <div class="panel olive">
+      <p style="margin:0">
+        <span class="pill yes">applied</span> &nbsp;<strong>Update — all accepted changes are now in
+        the docs.</strong> <a href="design.html">design.html</a> §8 was rewritten to
+        platform-finalized audit, a new <a href="design.html#orchestration">§11 (durable
+        orchestration)</a> added, and decisions #28–#32 locked; <a href="CONTRACT.md">CONTRACT.md</a>
+        is at v0.1; build and stack carry the failure matrix, spend, egress, and Node-only changes.
+        Two decisions remain open (§6). This page stays as the record of the review; the diagram
+        below shows the final, applied architecture.
+      </p>
+    </div>
+
 
     <h2 id="verdict">1 · The verdict</h2>
     <div class="panel olive">
@@ -314,7 +326,7 @@
         <rect class="dgbox" x="40" y="298" width="140" height="58" rx="6"/><text class="dgt" x="110" y="320" text-anchor="middle">Specialist µVM</text><text class="dgs" x="110" y="337" text-anchor="middle">ephemeral · proposes</text>
 
         <rect class="dglay" x="200" y="240" width="250" height="172" rx="10"/>
-        <rect class="dgtab" x="200" y="226" width="162" height="22" rx="4"/><text class="dgtabt" x="281" y="241" text-anchor="middle">THE MISSING LAYER</text>
+        <rect class="dgtab" x="200" y="226" width="170" height="22" rx="4"/><text class="dgtabt" x="285" y="241" text-anchor="middle">CONTROL PLANE · §11</text>
         <text class="dgt" x="325" y="270" text-anchor="middle">Durable orchestration</text>
         <text class="dgclay" x="325" y="285" text-anchor="middle">CONTROL PLANE</text>
         <text class="dgli" x="216" y="312">· job state machine</text>
@@ -337,13 +349,13 @@
         <line class="dgar" x1="200" y1="330" x2="182" y2="330" marker-start="url(#dgar)" marker-end="url(#dgar)"/><text class="dglb" x="110" y="289" text-anchor="middle">dispatch ↔ result</text>
         <line class="dgar" x1="450" y1="300" x2="468" y2="300" marker-start="url(#dgar)" marker-end="url(#dgar)"/>
         <line class="dgar" x1="325" y1="412" x2="325" y2="452" marker-end="url(#dgar)"/><text class="dglb" x="333" y="433">execute approved</text>
-        <line class="dgar" x1="325" y1="504" x2="325" y2="548" marker-end="url(#dgar)"/><text class="dglb" x="333" y="528">billable write</text>
+        <line class="dgar" x1="325" y1="504" x2="325" y2="548" marker-end="url(#dgar)"/><text class="dglb" x="333" y="528">billable write · capped</text>
         <path class="dgar" d="M110 356 V571 H213" marker-end="url(#dgar)"/><text class="dglb" x="118" y="450">read: LLM · scrape</text>
         <line class="dgar" x1="110" y1="244" x2="110" y2="298" marker-end="url(#dgar)"/><text class="dglb" x="118" y="273">loads tool</text>
         <line class="dgar" x1="110" y1="186" x2="110" y2="198" marker-end="url(#dgar)"/>
         <path class="dgar" d="M430 240 V90 H427" marker-end="url(#dgar)"/><text class="dglb" x="438" y="150">approval card</text>
 
-        <rect x="40" y="616" width="12" height="12" rx="2" fill="#FBEEE8" stroke="#D97757" stroke-width="1.5"/><text class="dglb" x="58" y="626">the missing layer</text>
+        <rect x="40" y="616" width="12" height="12" rx="2" fill="#FBEEE8" stroke="#D97757" stroke-width="1.5"/><text class="dglb" x="58" y="626">control plane (§11)</text>
         <rect x="196" y="616" width="12" height="12" rx="2" fill="#F0EEE6" stroke="#D1CFC5"/><text class="dglb" x="214" y="626">platform · compute</text>
         <rect x="356" y="616" width="12" height="12" rx="2" fill="rgba(120,140,93,0.12)" stroke="rgba(120,140,93,0.5)"/><text class="dglb" x="374" y="626">durable stores</text>
         <rect class="dgext" x="486" y="616" width="12" height="12" rx="2"/><text class="dglb" x="504" y="626">external</text>

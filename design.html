@@ -763,11 +763,18 @@
       </table>
     </div>
 
-    <h3>Write flow</h3>
+    <h3>Write flow — the platform finalizes</h3>
     <p>
-      The brain commit happens inside the same µVM run that executed the action, alongside the
-      Postgres + Better Stack writes. Maestro's <code>timeline.html</code> is updated when each
-      specialist's outcome webhook fires.
+      The µVM does <strong>not</strong> write the audit itself. It returns its result envelope, its
+      artifacts, and <em>proposed</em> brain updates; the <strong>platform finalizes</strong>. It
+      validates the envelope against the job contract, dedupes the delivery (a re-sent or replayed
+      webhook can't double-write), verifies the plan checksum, writes the <code>action_log</code>
+      row, <strong>renders</strong> the canonical <code>history.html</code> and
+      <code>timeline.html</code> entries from a trusted template over the validated data, and
+      <strong>commits</strong> them to the customer's brain repo with a scoped token. The tool
+      authors report content and proposes updates; only <em>authority over the canonical record</em>
+      lives with the platform. So the signed commit attests "a validated action occurred" — not
+      merely "a µVM holding our token wrote this text." (Mechanics: §11.)
     </p>
 
     <h3>Why brain HTML beats Postgres-alone for audit</h3>
@@ -828,7 +835,7 @@
       <tr><td class="k"><code>duration_ms</code></td><td class="v">number</td><td class="v">Total wall-clock time</td></tr>
       <tr><td class="k"><code>llm_tokens_used</code></td><td class="v">number</td><td class="v">For billing + cost accounting</td></tr>
       <tr><td class="k"><code>cost_usd</code></td><td class="v">number</td><td class="v">LLM cost + any externally-incurred spend (ads, etc.)</td></tr>
-      <tr><td class="k"><code>actions[]</code></td><td class="v">array</td><td class="v">Each: <code>type</code>, <code>proposal</code> JSON, <code>validation</code> (approved/rejected/reason), <code>executed</code> bool, <code>outcome</code>, <code>audit_path</code> (anchor into history.html)</td></tr>
+      <tr><td class="k"><code>actions[]</code></td><td class="v">array</td><td class="v">Each is a <strong>proposal</strong>: <code>type</code>, <code>proposal</code> JSON, <code>idempotency_key</code>. For policy-gated actions the µVM may <strong>not</strong> self-assign <code>validation</code> or <code>executed</code> — the platform's gate and broker stamp those after execution and write the <code>audit_path</code> (§11)</td></tr>
       <tr><td class="k"><code>brain_updates[]</code></td><td class="v">array</td><td class="v">File paths + operation (<code>append</code>, <code>edit</code>, <code>create</code>) — for git audit and customer view</td></tr>
       <tr><td class="k"><code>dashboard_updates[]</code></td><td class="v">array</td><td class="v">Widget IDs to refresh on the customer's dashboard</td></tr>
       <tr><td class="k"><code>next[]</code></td><td class="v">array</td><td class="v">Optional suggestions for follow-up work — <code>{ agent: "max", brief: "SEO followup on campaign x123 keywords" }</code></td></tr>
@@ -843,7 +850,7 @@
       <tr><td class="k"><code>next[]</code></td><td class="v">Self-sequencing workforce: Sac can finish and tell Maestro "now ask Max to look at these keywords" without Maestro hard-coding the Sac → Max relationship</td></tr>
       <tr><td class="k"><code>dashboard_updates[]</code></td><td class="v">Generative dashboard (json-render) stays in sync without Maestro knowing which widget belongs to which agent</td></tr>
       <tr><td class="k"><code>brain_updates[]</code></td><td class="v">Maestro can confirm which files moved before declaring the job done; useful for retry logic if a commit failed</td></tr>
-      <tr><td class="k"><code>cost_usd</code></td><td class="v">Per-customer monthly cap gets enforced at Maestro by summing this across jobs (catches the "Still on the grill" cost-runaway item)</td></tr>
+      <tr><td class="k"><code>cost_usd</code></td><td class="v">Reconciliation and accounting only — <strong>never</strong> the enforcement path. A crashed job reports nothing; an under-reporting tool would evade a cap built on it. Spend is bounded <em>before</em> the fact: a preflight monthly-cap check before dispatch plus provider-side hard limits (§11). Runtime/LLM cost and external ad/API spend are tracked as separate lines</td></tr>
     </table>
 
     <h3>Enforcement</h3>
@@ -880,8 +887,8 @@
           <td class="v">If the tool needs a dashboard surface, it ships a json-render widget definition that Maestro can include in <code>dashboard.json</code>.</td>
         </tr>
         <tr>
-          <td class="k">(optional) schema migration</td>
-          <td class="v">If the tool needs new tables/columns in the shared Postgres (under the customer's RLS scope), it ships SQL.</td>
+          <td class="k">(optional) result schema</td>
+          <td class="v">A registered, versioned schema (<code>tool.kind@version</code>) for the tool's structured output. Tools do <strong>not</strong> ship migrations against shared operational tables — query-hot result types become platform-owned <em>projections</em> derived from a generic <code>results</code> store. Adding a tool needs zero migrations.</td>
         </tr>
       </table>
     </div>
@@ -903,11 +910,14 @@
     <p>
       Inside the µVM the specialist also has access to <code>bash</code> for ancillary work:
       reading downloaded files, running a <code>jq</code> filter on a payload, exploring
-      transient state. Bash is <strong>never</strong> the path to external APIs — every billable
-      action (Meta, Stripe, Render deploys, etc.) goes through the tool's structured CLI so the
-      validator and the audit layer still apply. Think of it the way Claude Code itself ships
-      both <code>Edit</code>/<code>Read</code>/<code>Grep</code> <em>and</em> a <code>Bash</code>
-      tool: structured tools for the hot path, bash for the long tail.
+      transient state. Bash is <strong>never</strong> the path to external APIs. Read-only,
+      bounded-cost calls (LLM, scraping) run through the tool's structured CLI inside the µVM;
+      <strong>money-moving or state-mutating</strong> actions (Meta, Stripe, Render deploys, etc.)
+      are only <em>proposed</em> by the CLI — the platform's broker executes the approved plan
+      (§11), so the gate, the validator, and the audit layer always apply. Think of it the way
+      Claude Code itself ships both <code>Edit</code>/<code>Read</code>/<code>Grep</code>
+      <em>and</em> a <code>Bash</code> tool: structured tools for the hot path, bash for the long
+      tail.
     </p>
 
     <h3>The factory–workforce wall</h3>
@@ -927,7 +937,82 @@
 
 
     <!-- =========================================== -->
-    <h2 id="roadmap">11 · The hiring roadmap</h2>
+    <h2 id="orchestration">11 · Durable orchestration &amp; the control plane</h2>
+    <p>
+      The job contract (§9) says <em>what</em> Maestro and a µVM exchange. It does not say how a job
+      survives a crash, a lost webhook, or a retry without double-acting. "Fire a µVM, await its
+      HMAC webhook" is enough for read-only work and the MVP — and it fails the first time an
+      <code>apply</code> moves money and the completion webhook is lost to a deploy or a restart,
+      leaving an effect that happened but a record that didn't. The three hardest guarantees —
+      <strong>crash/re-run with zero loss and no double-effect</strong>, <strong>no tool moves
+      money outside policy</strong>, <strong>results comparable across the fleet</strong> — all rest
+      on a layer that has to be specified, not assumed.
+    </p>
+
+    <h3>The control plane owns durability; the µVM stays disposable</h3>
+    <p>
+      Between Maestro's decision and the µVM sits a <strong>durable control plane</strong>. The µVM
+      is modelled as an <em>external async activity</em> — never a durable worker. Durability lives
+      in the platform that dispatches, waits, dedupes, validates, and finalizes.
+    </p>
+    <div class="panel">
+      <table class="decisions" style="margin:0">
+        <tr><th>Mechanism</th><th>What it guarantees</th></tr>
+        <tr><td class="k">Job state machine</td><td class="v"><code>queued → dispatched → running → awaiting_approval → applying → {succeeded · partial · failed · timed_out}</code>. Every transition is a durable row.</td></tr>
+        <tr><td class="k"><code>action_items</code> ledger</td><td class="v">One row per apply item: <code>job_id</code>, <code>plan_item_id</code>, <code>external_idempotency_key</code>, before/after snapshot, terminal state. The skip-if-already-landed check is a ledger read, not a hope.</td></tr>
+        <tr><td class="k">Outbox / inbox</td><td class="v">Dispatch and webhook receipt are deduped on <code>unique(job_id, event_type, external_event_id)</code> — a replayed or duplicated delivery is a no-op.</td></tr>
+        <tr><td class="k">Leases + locks</td><td class="v">Per-agent, per-customer no-overlap locks and run coalescing — a daily shift over many customers can't stampede or double-run.</td></tr>
+        <tr><td class="k">Durable approval waits</td><td class="v">An out-of-policy plan parks as <code>awaiting_approval</code> for hours or days without holding a process; the Approve card resumes it.</td></tr>
+        <tr><td class="k">Reconciliation</td><td class="v">A sweep that closes the "effect happened, webhook lost" gap by reading external truth back against the ledger.</td></tr>
+      </table>
+    </div>
+    <p>
+      <span class="pill note">backend</span> &nbsp;For v0.1 this is a <strong>Postgres-backed state
+      machine with a transactional outbox/inbox — no new vendor</strong>. A durable engine
+      (Inngest, Restate) is a later swap behind the <em>same</em> interface, justified when
+      approvals sit for days or specialist chains grow. The caveat that keeps us honest: an engine
+      buys timers, retries, and waits — it does <strong>not</strong> buy exactly-once external
+      effects, trustworthy audit, or spend caps. Those come from idempotency keys, credential
+      scoping, and platform-side ledgers regardless of engine.
+    </p>
+
+    <h3>The gate: deterministic, platform-side, recomputes its own numbers</h3>
+    <p>
+      Money-moving and state-mutating work follows <strong>plan → gate → apply</strong>. A µVM
+      <code>plan</code> emits a changeset; the <strong>gate</strong> sits between plan and apply and
+      is deterministic and platform-side. Crucially it <strong>recomputes</strong> the bound from
+      the raw <code>params</code> plus a live external read-back — it never trusts a tool-authored
+      <code>projected_impact</code>, because a tool that under-reports its impact would otherwise
+      walk through. Within standing policy it auto-approves; outside it, an Approve card. Plans
+      carry an <strong>expiry</strong> and are re-validated at apply time, so an approval that sat
+      for days can't act on stale external state.
+    </p>
+
+    <h3>The broker: execution authority never enters the µVM</h3>
+    <p>
+      A µVM <em>proposes</em>; the platform <strong>broker</strong> <em>executes</em> the approved
+      plan, by idempotency key, item by item — <strong>partial success is a first-class state</strong>,
+      not an exception. The gate validates the proposal, never the proposer, so a smarter agent
+      never weakens the guardrail. <strong>Spend</strong> is enforced the same way: a preflight
+      monthly-cap check before dispatch, plus provider-side hard limits on both implementations;
+      self-reported <code>cost_usd</code> is reconciliation only.
+    </p>
+    <div class="panel warm">
+      <p style="margin:0">
+        <span class="pill open">open</span> &nbsp;<strong>Who holds the external write credential
+        during apply</strong> is the one decision left open. Two shapes: the broker holds the
+        credential and the µVM never touches the API (strict); or the apply-µVM holds a tightly
+        <em>scoped</em> credential and safety rests on the ledger + gate + reconciliation (lighter).
+        Decide <em>per provider</em> by one rule — can the credential be scoped, and the provider
+        hard-cap spend, tightly enough that a misbehaving µVM can't exceed the approved blast
+        radius? Default to the broker; allow scoped-cred only where that's verified. Not due until
+        the first money-moving tool — the MVP has no external writes.
+      </p>
+    </div>
+
+
+    <!-- =========================================== -->
+    <h2 id="roadmap">12 · The hiring roadmap</h2>
     <p>
       Once Maestro is live, the factory's job is to <strong>build the next specialist's tool</strong>
       and ship it into the catalog. When the customer (or Maestro) decides they need that role,
@@ -976,7 +1061,7 @@
 
 
     <!-- =========================================== -->
-    <h2 id="locked">12 · Decisions locked in this grill</h2>
+    <h2 id="locked">13 · Decisions locked</h2>
     <p>Each one is now a constraint on everything downstream.</p>
     <table class="decisions">
       <tr><th>#</th><th>Decision</th></tr>
@@ -1007,16 +1092,31 @@
       <tr><td class="k">25</td><td class="v"><span class="pill locked">locked</span> Billing = hybrid. Flat base subscription (Maestro + some specialists), metered add-ons for high-cost agents (e.g. media gen, paid ads).</td></tr>
       <tr><td class="k">26</td><td class="v"><span class="pill locked">locked</span> Specialist roster locked — all 3-letter names: Max, Vic, Sac, Jon, Tom, Roy, Moz, Sid, Sal, Ray, Lou, Nic. (Orchestrator names — Maestro, Consigliere — keep their full form.)</td></tr>
       <tr><td class="k">27</td><td class="v"><span class="pill locked">locked</span> Renames from original brief: John → Jon, Tom (Media) → Vic (Tom moves to Research), Lawyer "Regis" → Ray.</td></tr>
+      <tr><td class="k">28</td><td class="v"><span class="pill locked">locked</span> <strong>Platform-finalized audit.</strong> The µVM proposes; the platform validates, renders the canonical <code>history.html</code>/<code>timeline.html</code> from a trusted template over validated data, and commits to the brain with a scoped token. <span class="mono" style="color:var(--text-dim)">(review · supersedes the §8 in-µVM write)</span></td></tr>
+      <tr><td class="k">29</td><td class="v"><span class="pill locked">locked</span> <strong>Durable orchestration control plane.</strong> Job state machine + <code>action_items</code> idempotency ledger + outbox/inbox dedupe + leases + durable approval waits + reconciliation. Postgres-backed for v0.1; a durable engine is a later swap behind the same interface. <span class="mono" style="color:var(--text-dim)">(review)</span></td></tr>
+      <tr><td class="k">30</td><td class="v"><span class="pill locked">locked</span> <strong>Execution authority is the platform's.</strong> Mutating/money-moving actions go through plan → deterministic platform-side gate (which recomputes impact from raw params + read-back, with plan expiry) → broker, which executes the approved plan by idempotency key. The µVM never self-certifies <code>executed</code>. <span class="mono" style="color:var(--text-dim)">(review)</span></td></tr>
+      <tr><td class="k">31</td><td class="v"><span class="pill locked">locked</span> <strong>Spend enforced ahead of the fact.</strong> Preflight monthly-cap check before dispatch + provider-side hard limits on both impls; self-reported <code>cost_usd</code> is reconciliation only. <span class="mono" style="color:var(--text-dim)">(review)</span></td></tr>
+      <tr><td class="k">32</td><td class="v"><span class="pill locked">locked</span> <strong>Conformance ≠ security.</strong> <code>agent-cli-kit verify</code> is a quality gate (shape, not runtime); the real boundary is runtime — per-job scoped + separate read/write credentials, network-enforced egress allow-listing, brain-path allowlist, signed tool releases. <span class="mono" style="color:var(--text-dim)">(review)</span></td></tr>
     </table>
 
 
     <!-- =========================================== -->
-    <h2 id="open">13 · Still on the grill</h2>
+    <h2 id="open">14 · Still on the grill</h2>
+    <p>
+      <span class="pill note">review</span> &nbsp;An adversarial review (Codex + AMP) added
+      decisions #28–#32 above and left <strong>two</strong> decisions genuinely open. The full
+      reconciliation — verdict, every change, the edit plan — lives on the
+      <a href="review.html">review page</a>.
+    </p>
+    <table class="decisions">
+      <tr><th>Open decision</th><th>Shape</th></tr>
+      <tr><td class="k"><span class="pill open">open</span> Write-credential model for <code>apply</code></td><td class="v">Platform broker holds the credential and executes (strict) vs. a tightly-scoped credential in the apply-µVM (lighter). Decide per provider; default to the broker. Due before the first money-moving tool — not before the MVP. (§11)</td></tr>
+      <tr><td class="k"><span class="pill open">open</span> Warm path for 24/7 work</td><td class="v">Latency-sensitive, high-frequency roles (e.g. Sal, support) fit poorly with boot-a-µVM-per-event. A warm execution path may be needed. Deferred — Sal is tier-2 roadmap; the MVP is Maestro + Jon.</td></tr>
+    </table>
     <div class="panel" style="background:rgba(120,140,93,0.08); border-color:rgba(120,140,93,0.35)">
       <p style="margin:0">
-        <span class="pill locked">all clear</span> &nbsp;Every question from this session is
-        resolved — <strong>27 decisions locked, 0 open</strong>. Next time we sit down, we either
-        revisit one of the locked decisions (each is changeable) or move on to building.
+        <span class="pill locked">status</span> &nbsp;<strong>32 decisions locked, 2 open.</strong>
+        Each locked decision is still changeable; the two open ones are scheduled, not forgotten.
       </p>
     </div>
     <h3>What naturally comes next</h3>
@@ -1045,6 +1145,7 @@
       <li><a href="#audit">Action history &amp; audit</a></li>
       <li><a href="#contract">The job contract</a></li>
       <li><a href="#tool">What a tool actually is</a></li>
+      <li><a href="#orchestration">Durable orchestration</a></li>
       <li><a href="#roadmap">Hiring roadmap</a></li>
       <li><a href="#locked">Decisions locked</a></li>
       <li><a href="#open">What's next</a></li>
@@ -1052,8 +1153,8 @@
 
     <div class="divider"></div>
     <div class="eyebrow">Status</div>
-    <div class="stat"><span>Decisions locked</span><b>27</b></div>
-    <div class="stat"><span>Still open</span><b>0</b></div>
+    <div class="stat"><span>Decisions locked</span><b>32</b></div>
+    <div class="stat"><span>Still open</span><b>2</b></div>
     <div class="stat"><span>v0.1 scope</span><b>Maestro only</b></div>
     <div class="stat"><span>MVP loop</span><b>Maestro + Jon</b></div>
     <div class="stat"><span>First agent hired</span><b>—</b></div>

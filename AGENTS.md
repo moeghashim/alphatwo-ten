@@ -16,7 +16,8 @@ on every push to `main` via Cloudflare's native GitHub integration.
 | `build.html` | **Build** (`/build`) — the implementation plan. Two implementations in parallel (Impl 1 hand-wired · Impl 2 Stripe Projects), the MVP proving loop, the build phases. **The source of truth for *how* we build.** |
 | `branding/tenwhy.svg` | Wordmark + favicon. The brand mark (inlined into each page's masthead). |
 | `_redirects` | Cloudflare Pages redirects (e.g. legacy `/system-map` → `/design`). |
-| `CONTRACT.md` | **The tool contract** (`v0`) — the normative spec every tool CLI conforms to: command shape, output envelope, exit codes, plan/apply, introspection. Downstream of design §9–10; the artifact `agent-cli-kit verify` checks in CI. |
+| `CONTRACT.md` | **The tool contract** (`v0.1`) — the normative spec every tool CLI conforms to: command shape, output envelope, exit codes, plan/apply + the platform gate/broker, injected identity, introspection, conformance. Downstream of design §9–11; `agent-cli-kit verify` checks it in CI. |
+| `review.html` | **Review snapshot** (`/review`) — the reconciled Codex + AMP architecture review (verdict, every change, the edit plan, a full-system diagram). A record of the review, **not** a source of truth; the four docs above are canonical. |
 
 ## Source-of-truth hierarchy
 
@@ -24,7 +25,7 @@ on every push to `main` via Cloudflare's native GitHub integration.
 2. `design.html` — the architecture (the locked decisions, the workforce, the job contract).
 3. `build.html` — the implementation plan (the two impls, the MVP, the phases).
 4. `stack-map.html` — the concrete vendor stack.
-5. `CONTRACT.md` — the normative tool-CLI spec (detail behind design §9–10).
+5. `CONTRACT.md` — the normative tool-CLI spec (detail behind design §9–11).
 
 If these conflict, the higher one wins; stop and ask rather than guessing.
 

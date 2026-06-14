@@ -546,13 +546,20 @@
         <tr><td class="k">Boot</td><td class="v">Sapiom spawns a Node-only µVM. Base image has Node 20, git, curl, jq. ~1–2 s cold start.</td></tr>
         <tr><td class="k">Identify</td><td class="v">µVM is started with a short-lived bootstrap token, scoped to one job. Used once, to identify itself to Infisical.</td></tr>
         <tr><td class="k">Fetch secrets</td><td class="v">µVM hits Infisical with its bootstrap token, pulls exactly the secrets the specific tool needs (e.g. GitHub installation token for the brain repo).</td></tr>
-        <tr><td class="k">Clone tool</td><td class="v"><code>git clone tenwhy-tools/&lt;name&gt;</code>. Loads the Skill into the agent's prompt, makes the CLI runnable.</td></tr>
-        <tr><td class="k">Run</td><td class="v">Specialist works: reads inputs, calls the LLM (via OpenRouter), invokes the CLI, writes outputs.</td></tr>
-        <tr><td class="k">Deliver</td><td class="v">Three output channels (decision recap below): commits to brain repo · publishes to Render · uploads to R2.</td></tr>
+        <tr><td class="k">Load tool</td><td class="v">The tool comes from a <strong>prebaked image</strong> (or a shallow clone / R2 pull) — not a full <code>git clone tenwhy-tools/&lt;name&gt;</code> per boot, which would put GitHub availability and clone latency on the hot path. Loads the Skill into the agent's prompt, makes the CLI runnable.</td></tr>
+        <tr><td class="k">Run</td><td class="v">Specialist works: reads inputs, calls the LLM (via OpenRouter), invokes the CLI, writes outputs. Mutating/billable actions are only <em>proposed</em> (executed later by the platform broker).</td></tr>
+        <tr><td class="k">Deliver</td><td class="v">Returns its envelope + artifacts + <em>proposed</em> brain updates; bulky output → R2 (scoped). The <strong>platform finalizes</strong> — validates, writes Postgres, renders + commits the canonical audit to the brain (decision #28).</td></tr>
         <tr><td class="k">Webhook</td><td class="v">POSTs result + summary to Maestro's webhook endpoint. Includes a job ID + HMAC signature so Maestro can verify authenticity.</td></tr>
         <tr><td class="k">Teardown</td><td class="v">µVM exits. Billing stops.</td></tr>
       </table>
     </div>
+    <p>
+      <span class="pill note">Node-only ⇒ service</span> &nbsp;The base image is deliberately
+      Node-only (decision S13). The rule that keeps it that way: <strong>anything non-Node is a
+      service behind an HTTP boundary, never a package in the image</strong> — scraping (Scrapling),
+      and likewise browser screenshots, headless PDF rendering, or any future binary dependency.
+      The µVM stays small and fast; the heavy runtime lives in its own service the tool calls.
+    </p>
 
 
     <h2 id="data-stores">4 · Three data stores, one purpose each</h2>
@@ -685,6 +692,16 @@
         <tr><td class="k">µVM → OpenRouter</td><td class="v">Scoped OpenRouter key with per-job spend limit</td></tr>
       </table>
     </div>
+    <p>
+      <span class="pill note">runtime ≠ CI</span> &nbsp;This is the <strong>runtime</strong> security
+      boundary — and it, not <code>agent-cli-kit verify</code>, is what stops a misbehaving tool.
+      <code>verify</code> checks a CLI's <em>shape</em> in CI; the boundary is enforced here:
+      per-job scoped credentials with a <strong>read/write split</strong> (read for <code>plan</code>,
+      write for <code>apply</code>), <strong>network-enforced egress allow-listing</strong> (open
+      verification on <a href="build.html#verify">the build page</a>), a brain-path allowlist on
+      commits, and signed tool releases. Conformance is quality; the sandbox is security
+      (<a href="design.html#locked">design</a> #32).
+    </p>
 
 
     <h2 id="decisions">8 · Stack decisions locked in this session</h2>
@@ -719,7 +736,7 @@
       <tr><td class="k">CI/CD</td><td class="v">Render's GitHub-deploy hook is fine for Maestro/dashboard. Tool repos don't deploy — they get cloned into µVMs. Do we add a GitHub Action that validates tool repos (lint Skill, test CLI) on every push? Probably yes; spec TBD.</td></tr>
       <tr><td class="k">Backups</td><td class="v">Postgres: Render snapshots are fine. R2: bucket replication. Brain repos: GitHub is already canonical. Disaster recovery drills not specified.</td></tr>
       <tr><td class="k">Rate limiting</td><td class="v">Cloudflare in front gives basic DDoS. Need a per-customer rate limit on Maestro's webhook + dashboard API. Probably token-bucket in Postgres.</td></tr>
-      <tr><td class="k">Cost ceiling per customer</td><td class="v">A runaway specialist could burn LLM credits or Sapiom µVM hours. Need per-customer monthly cap + alerting (Better Stack).</td></tr>
+      <tr><td class="k">Cost ceiling per customer</td><td class="v"><strong>Resolved (design #31)</strong> — enforced ahead of the fact: a preflight monthly-cap check before dispatch + provider-side hard limits on both impls; self-reported <code>cost_usd</code> is reconciliation only. Better Stack alerting still wanted.</td></tr>
     </table>
   </main>
 
