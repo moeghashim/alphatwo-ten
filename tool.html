@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>tenwhy — Building a tool</title>
+<link rel="icon" type="image/svg+xml" href="branding/tenwhy.svg" />
+<meta name="description" content="How to build a tenwhy tool: the framework (TypeScript · Node 20 · Stricli via agent-cli-kit), the three-layer consistency model, scaffolding, commands, the pipeline and plan/apply patterns, and shipping. Written to hand to an agent." />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="tenwhy" />
+<meta property="og:title" content="tenwhy — building a tool" />
+<meta property="og:description" content="The build guide for tenwhy tools: framework, the agent-cli-kit, scaffolding, commands, pipeline + plan/apply, shipping. Conforms to CONTRACT.md." />
+<meta property="og:url" content="https://tenwhy.pages.dev/tool" />
+<style>
+  :root {
+    --bg: #FAF9F5; --bg-2: #F0EEE6; --bg-card: #FFFFFF;
+    --text: #3D3D3A; --text-dim: #87867F; --slate: #141413;
+    --border: #D1CFC5; --border-hi: #B8B5A8;
+    --clay: #D97757; --olive: #788C5D; --sky: #6A8CAF; --red: #B04A3F; --oat: #E3DACC;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.65 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .container { max-width: 1100px; margin: 0 auto; padding: 40px 24px 120px;
+    display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: 48px; }
+  @media (max-width: 960px) { .container { grid-template-columns: minmax(0, 1fr); }
+    aside { order: -1; position: static !important; } }
+  h1, h2, h3 { font-family: ui-serif, Georgia, "Times New Roman", serif; color: var(--slate); font-weight: 500; letter-spacing: -0.01em; }
+  h1 { font-size: 36px; margin: 0 0 14px; line-height: 1.2; }
+  h2 { font-size: 24px; margin: 56px 0 14px; }
+  h3 { font-size: 18px; margin: 28px 0 8px; }
+  .eyebrow { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); margin-bottom: 8px; }
+  p { margin: 0 0 12px; max-width: 680px; }
+  p.lead { font-size: 17px; color: var(--text); max-width: 680px; }
+  a { color: var(--clay); text-decoration: none; border-bottom: 1px dotted var(--clay); }
+  a:hover { background: rgba(217,119,87,0.08); }
+  code, .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 13px; }
+  code { background: var(--bg-2); padding: 1px 6px; border-radius: 4px; color: var(--slate); }
+  strong { font-weight: 600; color: var(--slate); }
+
+  .pill { display: inline-block; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 8px; border-radius: 4px; line-height: 1.6; vertical-align: middle; }
+  .pill.locked { background: rgba(120,140,93,0.16); color: var(--olive); }
+  .pill.note   { background: var(--bg-2); color: var(--text-dim); }
+  .pill.open   { background: rgba(176,74,63,0.10); color: var(--red); }
+
+  .panel { background: var(--bg-card); border: 1.5px solid var(--border); border-radius: 14px; padding: 22px 26px; margin: 16px 0 8px; }
+  .panel.tight { padding: 16px 20px; }
+  .panel.warm { border-color: rgba(217,119,87,0.35); background: #FDFCF9; }
+  .panel h3 { margin-top: 0; }
+
+  table.decisions { width: 100%; border-collapse: collapse; font-size: 14px; margin: 14px 0; }
+  table.decisions th, table.decisions td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  table.decisions th { font-family: ui-monospace, monospace; font-size: 11px; font-weight: 500; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; }
+  table.decisions td.k { color: var(--text-dim); width: 32%; }
+  table.decisions td.v { color: var(--slate); }
+
+  pre.code { background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; overflow-x: auto; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12.5px; line-height: 1.65; color: var(--slate); margin: 14px 0; white-space: pre; max-width: 100%; }
+  pre.code .c { color: var(--text-dim); }
+  pre.code .k { color: var(--clay); }
+  pre.code .s { color: var(--olive); }
+
+  ol.steps { list-style: none; counter-reset: st; padding: 0; margin: 16px 0; }
+  ol.steps > li { counter-increment: st; position: relative; padding: 6px 0 14px 38px; }
+  ol.steps > li::before { content: counter(st); position: absolute; left: 0; top: 4px; width: 24px; height: 24px; text-align: center; line-height: 24px; font-family: ui-monospace, monospace; font-size: 12px; font-weight: 600; color: var(--clay); background: rgba(217,119,87,0.12); border-radius: 50%; }
+  ol.steps > li b { color: var(--slate); font-family: ui-serif, Georgia, serif; font-size: 16px; font-weight: 500; display: block; margin-bottom: 3px; }
+
+  ul.check { list-style: none; padding: 0; margin: 12px 0; }
+  ul.check li { padding: 7px 0 7px 26px; position: relative; border-bottom: 1px solid var(--border); }
+  ul.check li:last-child { border-bottom: none; }
+  ul.check li::before { content: "✓"; position: absolute; left: 2px; top: 7px; color: var(--olive); font-weight: 600; }
+
+  aside { position: sticky; top: 32px; align-self: start; background: var(--bg-card); border: 1.5px solid var(--border); border-radius: 12px; padding: 18px 18px 14px; font-size: 13.5px; }
+  aside .eyebrow { margin: 0 0 10px; }
+  aside ol { margin: 0; padding: 0 0 0 18px; }
+  aside li { margin: 5px 0; line-height: 1.45; }
+  aside li a { color: var(--text); border-bottom: none; }
+  aside li a:hover { color: var(--clay); }
+  aside .divider { border-top: 1px solid var(--border); margin: 12px -18px; }
+  aside .stat { font-size: 12.5px; color: var(--text-dim); display: flex; justify-content: space-between; margin: 4px 0; gap: 10px; }
+  aside .stat b { color: var(--slate); font-weight: 500; text-align: right; }
+
+  footer.note { margin-top: 80px; padding-top: 20px; border-top: 1px solid var(--border); color: var(--text-dim); font-size: 13px; max-width: 680px; }
+
+  .site-footer { padding: 28px 24px 32px; border-top: 1px solid var(--border); text-align: center; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.10em; }
+  .site-footer a { color: var(--text-dim); text-decoration: none; border-bottom: 1px dotted var(--border-hi); }
+  .site-footer a:hover { color: var(--clay); border-bottom-color: var(--clay); }
+
+  .page-header { padding: 20px 24px; border-bottom: 1px solid var(--border); background: var(--bg); position: relative; }
+  .page-header .masthead-logo { display: block; width: 160px; height: auto; margin: 0 auto; }
+  .page-header .nav-links { position: absolute; right: 24px; top: 50%; transform: translateY(-50%); display: flex; gap: 20px; align-items: center; }
+  .page-header .nav-link { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.10em; color: var(--text-dim); text-decoration: none; padding: 4px 0; transition: color .15s ease; }
+  .page-header .nav-link:hover { color: var(--clay); }
+  @media (max-width: 720px) { .page-header .nav-links { display: none; } }
+
+  @media (max-width: 640px) {
+    .container { padding: 24px 16px 80px; gap: 28px; }
+    h1 { font-size: 28px; } h2 { font-size: 21px; margin: 40px 0 12px; } h3 { font-size: 16px; }
+    p, p.lead { font-size: 15px; max-width: none; }
+    .page-header { padding: 14px 16px; } .page-header .masthead-logo { width: 120px; }
+    code, .mono { word-break: break-word; overflow-wrap: anywhere; }
+    .panel { padding: 16px 18px; }
+    table.decisions { display: block; overflow-x: auto; }
+    aside { padding: 14px 16px; } aside .divider { margin: 12px 0; }
+    .site-footer { padding: 22px 16px 24px; font-size: 10px; }
+  }
+</style>
+</head>
+<body>
+<header class="page-header">
+  <a href="index.html" title="tenwhy — home" aria-label="tenwhy — home"><svg class="masthead-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 45.4" role="img" aria-label="tenwhy">
+    <path fill="#161615" d="m16 13.9h-6v-7.2h-0.3c-1.7 1.9-4.2 2.9-4.8 3.4-0.3 0.2-0.2 0.2-0.2 0.9v2.8h-3c-0.2 0.1-0.4 0.2-0.4 0.5v1.7c0 0.3 0.2 0.5 0.4 0.5 1.5 0 3.1 0.3 3.1 3.7v9.6c0 4 1.6 5.8 4.3 5.8 2.6 0.2 5.5-1.3 7-2.2l0.5-0.3c0.2-0.1 0.2-0.3 0.1-0.6l-0.9-1.6c-0.4-0.5-0.8 0-0.8 0l-0.8 0.4c-0.6 0.4-1.5 0.8-2.4 0.8-1.2 0-1.8-0.9-1.8-2.6v-12.6h5.6c0.3 0 0.5-0.1 0.5-0.4v-2.2c0-0.2-0.1-0.4-0.1-0.4z"/>
+    <path fill="#161615" d="m36.4 28.7c-0.3-0.1-0.5 0.3-0.5 0.3-0.9 1.1-2.6 3.1-5.8 3.2-3 0-5.1-1.7-6.3-4.7l12.8-5.4c0.3-2.7-2.7-8.7-8.8-8.7-4.8 0-10.1 2.9-10.1 10.7 0 4.8 3 11.5 11.3 11.5 5.6 0.1 8.2-3.1 9.2-5.5 0.2-0.5-0.3-0.6-0.3-0.6l-1.5-0.8zm-9.8-12c2.3-0.1 3.7 2.2 3.6 4.8l-6.8 3.5c-0.8-3.8-0.2-8.1 3.2-8.3z"/>
+    <path fill="#161615" d="m66.8 32.6c-1.6 0-3.1-0.4-3.1-3.6v-7.7c0-5.7-2.7-7.9-7.2-7.9-4 0-6.1 2.8-7.7 4.8l0.7-5.7c-2.8 1.7-6.5 2.9-9.1 3.2-0.2 0.1-0.3 0.3-0.3 0.5v1.6c0 0.4 0.4 0.4 0.4 0.4 1.4 0.1 2.7 0.9 2.7 4.9v5.5c0 2.6-1.3 4-2.7 4h-0.8c-0.2 0-0.4 0.2-0.4 0.5v1.5c0 0.3 0.2 0.5 0.4 0.5h12.5c0.3 0 0.5-0.2 0.5-0.5v-1.5c0-0.3-0.2-0.5-0.5-0.5h-0.3c-1.3 0-2.8-1.4-2.8-4v-7.7c0.7-2 3.3-4 5.5-4 2.5 0 3.1 1.4 3.1 4.3v7.4c0 3.2-0.9 4-2 4h-0.5c-0.2 0-0.5 0.2-0.5 0.5v1.5c0 0.3 0.2 0.5 0.5 0.5h11.6c0.3 0 0.5-0.2 0.5-0.5v-1.5c0-0.3-0.2-0.5-0.5-0.5z"/>
+    <path fill="#161615" d="m104.4 13.9h-8.1c-0.3 0-0.5 0.1-0.5 0.4v1.6c0 0.3 0.2 0.5 0.5 0.5h1c1 0 1.1 1.1 0.3 2.9l-3.8 9.2-3.8-8.9c-0.9-2.4-0.4-3.2 0.9-3.2h0.6c0.3 0 0.5-0.2 0.5-0.4v-1.7c0-0.2-0.2-0.4-0.4-0.4h-10.6c-0.2 0-0.5 0.1-0.5 0.4v1.6c0 0.3 0.3 0.5 0.5 0.5h0.9c1.2 0 1.4 0.7 0.5 3l-3.7 9-3.5-8.3c-1.2-2.7-0.9-3.7 0.8-3.7 0.3 0 0.5-0.2 0.5-0.4v-1.7c0-0.2-0.2-0.4-0.4-0.4h-9.9c-0.3 0-0.5 0.1-0.5 0.4v1.6c0 0.3 0.2 0.5 0.5 0.5h0.3c1 0 1.6 0.7 2.9 3.7l6.1 14.5c0.1 0.3 0.3 0.5 0.6 0.5h2.5c0.3 0 0.5-0.2 0.6-0.5l5.3-12.9 5.9 12.9c0.1 0.3 0.3 0.5 0.6 0.5h2.6c0.3 0 0.5-0.2 0.6-0.5l7-15.7c1-2.2 1.6-2.5 2.6-2.5h0.5c0.3 0 0.4-0.2 0.4-0.5v-1.6c0-0.2-0.1-0.4-0.3-0.4z"/>
+    <path fill="#161615" d="m132.4 32.6h-0.7c-1.3 0-2.8-1.2-2.8-3.8v-8.4c0-5.1-2.7-7.1-7.1-7.1-3.4 0-5.4 1.9-7.2 4.2v-16.5c0-0.2-0.2-0.1-0.3 0-2.5 1.8-5.6 3.1-8.6 4.3-0.2 0.1-0.2 0.3-0.2 0.5v1.4c0 0.4 0.4 0.5 0.4 0.5 1.7 0 2.6 0.9 2.6 4.4v16.7c0 2.6-1.2 3.8-2.6 3.8h-0.8c-0.3 0-0.5 0.2-0.5 0.5v1.5c0 0.3 0.2 0.5 0.5 0.5h12.8c0.3 0 0.6-0.1 0.6-0.5v-1.5c-0.1-0.7-0.4-0.5-1.1-0.5-1.4 0-2.8-1.4-2.8-3.9v-8.3c0.8-1.8 3.1-3.5 5.3-3.5 2.3 0 3.2 0.9 3.2 4.4v7.3c0 2.8-0.9 4-2.1 4h-0.5c-0.3 0-0.5 0.2-0.5 0.5v1.5c0 0.3 0.2 0.5 0.5 0.5h11.9c0.3 0 0.6-0.1 0.6-0.4v-1.6c0-0.3-0.2-0.5-0.6-0.5z"/>
+    <path fill="#161615" d="m154.1 13.9h-7.9c-0.4 0-0.2 0 0 0-0.3 0-0.5 0.1-0.5 0.4v1.6c0 0.3 0.2 0.5 0.5 0.5h1c1.2 0 1.1 1.2 0.2 3.2l-3.3 7.1-3-6.8c-1.2-2.7-1-3.5 0.6-3.5h0.3c0.2 0 0.4-0.2 0.4-0.4v-1.7c0-0.3-0.2-0.5-0.4-0.5h-10.5c-0.3 0-0.5 0.2-0.5 0.5v1.6c0 0.3 0.2 0.5 0.5 0.5h0.5c0.8 0 1.3 0.3 2.6 3l6.1 12.7-4.9 10c-0.1 0.2 0 0.4 0.2 0.5l2.5 1.2c0.2 0.1 0.6 0 0.7-0.2l11.9-24.6c1.1-2.2 1.7-2.6 2.6-2.6h0.5c0.3 0 0.4-0.2 0.4-0.5v-1.6c0-0.2-0.1-0.4-0.5-0.4z"/>
+    <circle fill="#D76F4D" cx="157.4" cy="33.7" r="1.7"/>
+  </svg></a>
+  <div class="nav-links">
+    <a href="design.html" class="nav-link">Design</a>
+    <a href="stack-map.html" class="nav-link">Stack</a>
+    <a href="build.html" class="nav-link">Build</a>
+    <a href="tool.html" class="nav-link">Build a tool</a>
+  </div>
+</header>
+
+<div class="container">
+  <main>
+    <div class="eyebrow">tenwhy · building a tool</div>
+    <h1>How to build a tool</h1>
+    <p class="lead">
+      A practical guide to building a <strong>tenwhy tool</strong> — the unit of work a specialist
+      runs. If you're an agent picking this up cold: read this top to bottom, then build. The
+      <em>rules</em> a tool must obey live in <a href="CONTRACT.md">CONTRACT.md</a> (normative);
+      <em>what</em> a tool is and <em>why</em> lives in <a href="design.html#tool">design §10</a>
+      and <a href="design.html#orchestration">§11</a>. This page is the <em>how</em>.
+    </p>
+    <div class="panel warm">
+      <p style="margin:0">
+        <span class="pill note">prerequisite</span> &nbsp;Tools are built <strong>on</strong>
+        <code>@tenwhy/agent-cli-kit</code> + the starter template. If those don't exist yet, build
+        them first — this guide doubles as their spec. The kit implements the contract once so a
+        tool author writes only tool-specific logic.
+      </p>
+    </div>
+
+
+    <h2 id="stack">1 · The stack (settled)</h2>
+    <p>Every tool uses the same stack. No per-tool variation — uniformity is the whole point.</p>
+    <table class="decisions">
+      <tr><th>Choice</th><th>Decision &amp; why</th></tr>
+      <tr><td class="k">Language</td><td class="v"><strong>TypeScript</strong>, end to end. The ecosystem tools need (Exa, Anthropic/Vercel SDKs, cheerio, Lighthouse) is decisively TS/Node.</td></tr>
+      <tr><td class="k">Runtime</td><td class="v"><strong>Node 20</strong> in the µVM (<a href="stack-map.html#decisions">S13</a> — Node-only, unamended). Tools are <strong>bundled to a single JS file</strong> with esbuild/tsup and run on plain <code>node</code>.</td></tr>
+      <tr><td class="k">Bun</td><td class="v">Optional <strong>dev</strong> accelerator only (fast installs/tests). <strong>Not</strong> the runtime; nothing ships as a <code>bun --compile</code> binary. Lighthouse/Playwright-class libs are first-class on Node and still hit edges on Bun.</td></tr>
+      <tr><td class="k">CLI framework</td><td class="v"><strong>Stricli</strong> — TS-first, explicit, typed. But you <strong>never import it directly</strong>; the kit wraps it. Swappable internal detail.</td></tr>
+      <tr><td class="k">Schemas</td><td class="v"><strong>Zod</strong> — one schema drives input validation, the result shape, and the generated <code>--describe</code>.</td></tr>
+      <tr><td class="k">Repo</td><td class="v"><strong>One repo per tool</strong> (<code>tenwhy-tools/&lt;name&gt;</code>, <a href="design.html#locked">decision #23</a>), depending on the published kit. The kit lives in its own monorepo.</td></tr>
+    </table>
+
+
+    <h2 id="layers">2 · Three layers — you only write the top one</h2>
+    <p>Consistency is enforced, not hoped for. It's split across three layers so nothing drifts:</p>
+    <div class="panel tight">
+      <table class="decisions" style="margin:0">
+        <tr><th>Layer</th><th>What it is</th><th>Who owns it</th></tr>
+        <tr><td class="k"><a href="CONTRACT.md">Contract</a> (versioned)</td><td class="v">The rules: envelope, canonical verbs, exit codes, plan/apply, <code>--describe</code>, bounded output.</td><td class="v">platform</td></tr>
+        <tr><td class="k"><code>@tenwhy/agent-cli-kit</code></td><td class="v">Implements the contract <em>once</em>: TTY-detecting output, error→exit mapping, <code>--describe</code> from Zod, bounded lists, plus a <code>verify</code> command.</td><td class="v">platform</td></tr>
+        <tr><td class="k">Starter template</td><td class="v">Thin wiring only — framework setup + kit import + a <code>SKILL.md</code> stub. Nothing behavioral, so nothing drifts.</td><td class="v">platform</td></tr>
+      </table>
+    </div>
+    <p>
+      <strong>Your job as a tool author:</strong> the tool-specific command logic + the result
+      schema + a two-line <code>SKILL.md</code>. That's it. The kit handles every contract detail,
+      so a new tool is agent-ready on day one with zero per-tool integration.
+    </p>
+
+
+    <h2 id="scaffold">3 · Scaffold &amp; repo layout</h2>
+    <pre class="code"><span class="c"># one command stamps out a conforming tool repo</span>
+npx create-tenwhy-tool seo --agent max</pre>
+    <p>You get:</p>
+    <pre class="code">tenwhy-tools/seo/
+├── spec.yaml            <span class="c"># name, agent persona, contract_version, result schemas</span>
+├── SKILL.md             <span class="c"># two-line purpose + when-to-use (the agent reads this)</span>
+├── src/
+│   ├── index.ts         <span class="c"># kit entrypoint — registers commands, nothing else</span>
+│   ├── commands/        <span class="c"># one file per command (audit.ts, plan.ts, apply.ts…)</span>
+│   └── schemas/         <span class="c"># Zod result schemas (seo.audit@1, …)</span>
+├── test/                <span class="c"># CLI tests + the failure-path matrix</span>
+└── package.json         <span class="c"># depends on @tenwhy/agent-cli-kit; build = esbuild bundle</span></pre>
+    <pre class="code"><span class="c"># spec.yaml</span>
+name: seo
+agent: max                 <span class="c"># the specialist persona that runs this tool</span>
+contract_version: 0
+result_schemas: [seo.audit@1, seo.plan@1]</pre>
+
+
+    <h2 id="command">4 · Write a command</h2>
+    <p>
+      A command is a Zod input schema + a handler that returns <code>data</code>. The kit does the
+      rest — parses args, validates input, emits the <code>{ok,data,error,meta}</code> envelope on
+      <code>--json</code>, maps errors to exit codes, bounds output, and generates
+      <code>--describe</code>. You never touch any of that.
+    </p>
+    <pre class="code"><span class="c">// src/commands/audit.ts</span>
+<span class="k">import</span> { defineCommand, z } <span class="k">from</span> <span class="s">'@tenwhy/agent-cli-kit'</span>
+
+<span class="k">export default</span> defineCommand({
+  verb: <span class="s">'audit'</span>,            <span class="c">// canonical or declared stage verb</span>
+  rw: <span class="s">'read'</span>,                <span class="c">// read | write — surfaced in --describe</span>
+  input: z.object({
+    url: z.string().url(),
+    severity: z.enum([<span class="s">'low'</span>, <span class="s">'medium'</span>, <span class="s">'high'</span>]).optional(),
+  }),
+  result: <span class="s">'seo.audit@1'</span>,      <span class="c">// registered result schema</span>
+  <span class="k">async</span> run({ input, ctx }) {
+    <span class="k">const</span> report = <span class="k">await</span> ctx.lighthouse(input.url)   <span class="c">// kit helpers via ctx</span>
+    <span class="k">return</span> {
+      data: { issues: report.issues },
+      outcome: { unit: <span class="s">'count'</span>, projected: report.issues.length, cost_usd: ctx.cost() },
+    }
+  },
+})</pre>
+    <p>
+      <span class="pill note">errors</span> &nbsp;Throw <code>ctx.error('INVALID_ENUM', …)</code> with
+      the allowed set — the kit renders the enumerated, teaching error and the right exit code. Never
+      <code>console.log</code> on stdout; stdout is the envelope, stderr is diagnostics.
+    </p>
+
+
+    <h2 id="pipeline">5 · Read tools — the pipeline pattern</h2>
+    <p>
+      Research/audit tools are a chain of <strong>idempotent stages</strong> that read and write
+      JSON artifacts in the <strong>run directory</strong> (scratch — it dies with the µVM; durable
+      state is the platform's job). A stage is side-effect-free and replayable, not "pure" — an LLM
+      call may vary; the <em>write</em> is dedup-keyed, and you record <code>model + prompt + input</code>
+      versions so replay-as-regression-test is meaningful.
+    </p>
+    <pre class="code"><span class="c">// scrape → extract → analyze → synthesize, each its own subcommand</span>
+seo crawl   --url basketball.com   <span class="c"># → run-dir/crawl.json</span>
+seo audit                          <span class="c"># reads crawl.json → run-dir/audit.json</span>
+seo synthesize                     <span class="c"># reads audit.json → the result + a brain doc</span></pre>
+    <p>
+      Scraping and browsers never run in the µVM — call the <strong>scraping service</strong>
+      (Scrapling/Firecrawl) over HTTP. The µVM stays Node-only and small
+      (<a href="stack-map.html#on-demand">stack §3</a>).
+    </p>
+
+
+    <h2 id="mutate">6 · Write tools — plan / apply</h2>
+    <p>
+      Nothing mutates an external system except through <strong>plan → gate → apply</strong>. The
+      µVM only <em>proposes</em>; the platform's gate validates and its broker executes
+      (<a href="design.html#orchestration">design §11</a>, <a href="CONTRACT.md">CONTRACT §8</a>).
+    </p>
+    <pre class="code"><span class="c">// plan: emit an enforceable changeset — the µVM proposes, never executes</span>
+<span class="k">export default</span> defineCommand({
+  verb: <span class="s">'plan'</span>, rw: <span class="s">'read'</span>, result: <span class="s">'seo.plan@1'</span>,
+  <span class="k">async</span> run({ ctx }) {
+    <span class="k">return</span> { data: { plan: { items: [{
+      id: <span class="s">'h1-homepage'</span>,
+      action: <span class="s">'set-title'</span>,
+      params: { page: <span class="s">'/'</span>, title: <span class="s">'…'</span> },
+      idempotency_key: ctx.idem(<span class="s">'set-title'</span>, <span class="s">'/'</span>),
+      preconditions: { current_title: <span class="s">'…'</span> },   <span class="c">// re-checked at apply</span>
+    }] } } }
+  },
+})</pre>
+    <pre class="code"><span class="c">// apply: takes ONLY an approved plan ref; the platform broker runs it</span>
+<span class="k">export default</span> defineCommand({
+  verb: <span class="s">'apply'</span>, rw: <span class="s">'write'</span>,
+  input: z.object({ plan: z.string() }),   <span class="c">// r2 ref + checksum, not free-form args</span>
+  <span class="k">async</span> run({ input, ctx }) {
+    <span class="k">return</span> ctx.applyPlan(input.plan)   <span class="c">// per-item, idempotent, partial-success aware</span>
+  },
+})</pre>
+    <p>
+      <span class="pill note">rules</span> &nbsp;Never put <code>projected_impact</code> the gate can
+      trust — the gate <strong>recomputes</strong> it from raw <code>params</code> + a live read-back.
+      <code>apply</code> refuses a checksum mismatch or an expired plan. Read-only tools simply have
+      no <code>write</code> verbs — same architecture, different classification.
+    </p>
+
+
+    <h2 id="outcome">7 · Result schema &amp; the outcome spine</h2>
+    <p>
+      Register a versioned result schema (<code>tool.kind@version</code>) for the structured output —
+      the platform validates <code>data</code> against it at ingest and rejects on mismatch. Every
+      result also populates the <strong>fixed cross-fleet outcome object</strong> so self-improvement
+      can compare across tools (<a href="CONTRACT.md">CONTRACT §11</a>):
+    </p>
+    <pre class="code">meta.outcome = { unit, projected, realized, cost_usd, confidence }
+  <span class="c">// unit ∈ usd · rank · pct · count · ms ; realized filled at reconciliation</span></pre>
+
+
+    <h2 id="skill">8 · SKILL.md — keep it to two lines</h2>
+    <p>
+      The fleet contract is referenced, never repeated. The Skill is just purpose + when-to-use +
+      the command list. Maestro routes on <code>--describe</code>, not on prose.
+    </p>
+    <pre class="code"><span class="c"># seo — SEO audit &amp; on-page fixes (for Max)</span>
+
+Use when the customer needs an SEO audit or to apply on-page improvements.
+Commands: `seo audit`, `seo plan`, `seo apply` — all follow the tenwhy CLI contract.
+Run `seo &lt;cmd&gt; --describe` for the machine spec.</pre>
+
+
+    <h2 id="ship">9 · Verify &amp; ship</h2>
+    <ol class="steps">
+      <li><b>Run the conformance gate</b><code>agent-cli-kit verify</code> asserts the envelope, canonical verbs, enumerated errors, exit codes, bounded output, and that <code>--describe</code> matches the schema. It's a <em>quality</em> gate, not a security one.</li>
+      <li><b>Prove the failure paths</b>For write tools, test the matrix from <a href="build.html#loop">build §2</a>: retry, duplicate/lost webhook, crash before/after apply, projection rebuild. Idempotency is asserted by the ledger, not hoped for.</li>
+      <li><b>CI on every push</b>The repo's GitHub Action runs <code>verify</code> + Skill lint + CLI tests + the harness-seam check. Green is the gate to publish.</li>
+      <li><b>Publish to the catalog</b>A passing tool is published into the versioned Tool Catalog; Maestro can then load it into a specialist. The factory's Reviewer is the automated owner of this gate.</li>
+    </ol>
+
+
+    <h2 id="done">10 · Definition of done</h2>
+    <ul class="check">
+      <li>TypeScript, bundled to JS, runs on Node 20 — no Bun runtime dependency.</li>
+      <li>Built on <code>@tenwhy/agent-cli-kit</code>; the framework is never imported directly.</li>
+      <li>Canonical verbs only (tier-1); any stage verbs declared in <code>--describe</code>.</li>
+      <li>Every command: Zod input, returns <code>data</code> + <code>meta.outcome</code>; envelope handled by the kit.</li>
+      <li>Mutations go through <code>plan</code> → gate → <code>apply</code>; <code>apply</code> takes only an approved plan ref.</li>
+      <li>No secrets stored; reads via injected scoped creds; external writes proposed, not executed in the µVM.</li>
+      <li>Registered, versioned result schema; validates at ingest.</li>
+      <li>Two-line <code>SKILL.md</code>; <code>spec.yaml</code> declares agent + contract version.</li>
+      <li><code>agent-cli-kit verify</code> green in CI; failure-path tests pass.</li>
+    </ul>
+
+    <footer class="note">
+      The <em>how</em>. The rules are in <a href="CONTRACT.md">CONTRACT.md</a> (normative, versioned);
+      the <em>what/why</em> in <a href="design.html#tool">design §10–11</a>; the vendor stack in
+      <a href="stack-map.html">the stack</a>. Build <code>@tenwhy/agent-cli-kit</code> + the template
+      first; everything here is built on them.
+    </footer>
+  </main>
+
+  <aside>
+    <div class="eyebrow">On this page</div>
+    <ol>
+      <li><a href="#stack">The stack</a></li>
+      <li><a href="#layers">Three layers</a></li>
+      <li><a href="#scaffold">Scaffold &amp; layout</a></li>
+      <li><a href="#command">Write a command</a></li>
+      <li><a href="#pipeline">Pipeline (read)</a></li>
+      <li><a href="#mutate">plan / apply (write)</a></li>
+      <li><a href="#outcome">Result &amp; outcome</a></li>
+      <li><a href="#skill">SKILL.md</a></li>
+      <li><a href="#ship">Verify &amp; ship</a></li>
+      <li><a href="#done">Definition of done</a></li>
+    </ol>
+
+    <div class="divider"></div>
+    <div class="eyebrow">Stack at a glance</div>
+    <div class="stat"><span>Language</span><b>TypeScript</b></div>
+    <div class="stat"><span>Runtime</span><b>Node 20</b></div>
+    <div class="stat"><span>Framework</span><b>Stricli (via kit)</b></div>
+    <div class="stat"><span>Schemas</span><b>Zod</b></div>
+    <div class="stat"><span>Bundle</span><b>esbuild / tsup</b></div>
+    <div class="stat"><span>Repo</span><b>one per tool</b></div>
+
+    <div class="divider"></div>
+    <div class="eyebrow">Companions</div>
+    <div style="font-size:12.5px; line-height:1.8;">
+      <div><a href="design.html" style="color:var(--text); border:none;">The design</a></div>
+      <div><a href="CONTRACT.md" style="color:var(--text); border:none;">The tool contract</a></div>
+      <div><a href="build.html" style="color:var(--text); border:none;">Build</a></div>
+      <div><a href="stack-map.html" style="color:var(--text); border:none;">Stack</a></div>
+    </div>
+  </aside>
+</div>
+
+<footer class="site-footer">
+  <div style="margin-bottom:10px"><a href="index.html">Factory map</a> · <a href="design.html">Design</a> · <a href="stack-map.html">Stack</a> · <a href="build.html">Build</a> · <a href="tool.html">Build a tool</a></div>
+  Part of <a href="https://www.10claws.com/en">10claws</a>
+</footer>
+
+</body>
+</html>

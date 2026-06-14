@@ -14,6 +14,7 @@ on every push to `main` via Cloudflare's native GitHub integration.
 | `design.html` | **The design** (`/design`) — the comprehensive architecture reference. The source of truth for *what* tenwhy is. |
 | `stack-map.html` | **Stack** (`/stack-map`) — what runs where (the current/Impl-1 stack: Render, Cloudflare, Sapiom, OpenRouter, GitHub, etc.). |
 | `build.html` | **Build** (`/build`) — the implementation plan. Two implementations in parallel (Impl 1 hand-wired · Impl 2 Stripe Projects), the MVP proving loop, the build phases. **The source of truth for *how* we build.** |
+| `tool.html` | **Build a tool** (`/tool`) — the build guide for tool authors (incl. agents): framework (TS · Node 20 · Stricli via `agent-cli-kit`), scaffolding, commands, the pipeline + plan/apply patterns, shipping. The *how-to*; conforms to `CONTRACT.md`. |
 | `branding/tenwhy.svg` | Wordmark + favicon. The brand mark (inlined into each page's masthead). |
 | `_redirects` | Cloudflare Pages redirects (e.g. legacy `/system-map` → `/design`). |
 | `CONTRACT.md` | **The tool contract** (`v0.1`) — the normative spec every tool CLI conforms to: command shape, output envelope, exit codes, plan/apply + the platform gate/broker, injected identity, introspection, conformance. Downstream of design §9–11; `agent-cli-kit verify` checks it in CI. |
@@ -25,6 +26,7 @@ on every push to `main` via Cloudflare's native GitHub integration.
 3. `build.html` — the implementation plan (the two impls, the MVP, the phases).
 4. `stack-map.html` — the concrete vendor stack.
 5. `CONTRACT.md` — the normative tool-CLI spec (detail behind design §9–11).
+6. `tool.html` — how to build a tool (the how-to; derived from `CONTRACT.md` + design).
 
 If these conflict, the higher one wins; stop and ask rather than guessing.
 
