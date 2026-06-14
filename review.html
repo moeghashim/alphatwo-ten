@@ -297,7 +297,9 @@
       Assembled, the whole system looks like this — <strong>the new layer in clay</strong>,
       everything else already in place. Maestro stops firing µVMs directly; every job now
       routes through the control plane, which dispatches propose-only µVMs, finalizes all
-      durable writes, and brokers any money-moving call.
+      durable writes, and brokers any money-moving call. The <strong>worker (dashed) is the only
+      temporary piece</strong> — it spins up for one job and disappears; Maestro, the brain, and the
+      stores are the permanent project.
     </p>
     <div class="panel" style="padding:16px 12px">
       <svg width="100%" viewBox="0 0 680 650" role="img" aria-labelledby="sysd-t sysd-d" style="display:block">
@@ -305,6 +307,7 @@
         <desc id="sysd-d">Maestro enqueues jobs into a new durable orchestration control plane (state machine, idempotency ledger, outbox/inbox, policy gate, reconciliation), which dispatches ephemeral propose-only specialist µVMs, routes approved plans through a write broker to external APIs, surfaces approval cards to the dashboard, and finalizes all writes to Postgres, R2, and the brain repo.</desc>
         <style>
           .dgbox{fill:#F0EEE6;stroke:#D1CFC5;stroke-width:1;}
+          .dgtmp{fill:#F0EEE6;stroke:#9A978C;stroke-width:1.2;stroke-dasharray:5 4;}
           .dglay{fill:#FBEEE8;stroke:#D97757;stroke-width:1.5;}
           .dgtab{fill:#D97757;}
           .dgstore{fill:rgba(120,140,93,0.12);stroke:rgba(120,140,93,0.5);stroke-width:1;}
@@ -323,7 +326,7 @@
         <rect class="dgbox" x="225" y="140" width="200" height="54" rx="6"/><text class="dgt" x="325" y="162" text-anchor="middle">Maestro</text><text class="dgs" x="325" y="178" text-anchor="middle">always-on · stateless</text>
         <rect class="dgbox" x="40" y="140" width="140" height="46" rx="6"/><text class="dgt" x="110" y="160" text-anchor="middle">Factory</text><text class="dgs" x="110" y="176" text-anchor="middle">builds tools</text>
         <rect class="dgbox" x="40" y="198" width="140" height="46" rx="6"/><text class="dgt" x="110" y="218" text-anchor="middle">Tool catalog</text><text class="dgs" x="110" y="234" text-anchor="middle">versioned</text>
-        <rect class="dgbox" x="40" y="298" width="140" height="58" rx="6"/><text class="dgt" x="110" y="320" text-anchor="middle">Specialist µVM</text><text class="dgs" x="110" y="337" text-anchor="middle">ephemeral · proposes</text>
+        <rect class="dgtmp" x="40" y="298" width="140" height="58" rx="6"/><text class="dgt" x="110" y="320" text-anchor="middle">Specialist µVM</text><text class="dgs" x="110" y="337" text-anchor="middle">per job · then gone</text>
 
         <rect class="dglay" x="200" y="240" width="250" height="172" rx="10"/>
         <rect class="dgtab" x="200" y="226" width="170" height="22" rx="4"/><text class="dgtabt" x="285" y="241" text-anchor="middle">CONTROL PLANE · §11</text>
@@ -355,10 +358,11 @@
         <line class="dgar" x1="110" y1="186" x2="110" y2="198" marker-end="url(#dgar)"/>
         <path class="dgar" d="M430 240 V90 H427" marker-end="url(#dgar)"/><text class="dglb" x="438" y="150">approval card</text>
 
-        <rect x="40" y="616" width="12" height="12" rx="2" fill="#FBEEE8" stroke="#D97757" stroke-width="1.5"/><text class="dglb" x="58" y="626">control plane (§11)</text>
-        <rect x="196" y="616" width="12" height="12" rx="2" fill="#F0EEE6" stroke="#D1CFC5"/><text class="dglb" x="214" y="626">platform · compute</text>
-        <rect x="356" y="616" width="12" height="12" rx="2" fill="rgba(120,140,93,0.12)" stroke="rgba(120,140,93,0.5)"/><text class="dglb" x="374" y="626">durable stores</text>
-        <rect class="dgext" x="486" y="616" width="12" height="12" rx="2"/><text class="dglb" x="504" y="626">external</text>
+        <rect x="40" y="616" width="12" height="12" rx="2" fill="#FBEEE8" stroke="#D97757" stroke-width="1.5"/><text class="dglb" x="58" y="626">control plane</text>
+        <rect x="165" y="616" width="12" height="12" rx="2" fill="#F0EEE6" stroke="#D1CFC5"/><text class="dglb" x="183" y="626">always-on</text>
+        <rect class="dgtmp" x="270" y="616" width="12" height="12" rx="2"/><text class="dglb" x="288" y="626">per-job worker</text>
+        <rect x="415" y="616" width="12" height="12" rx="2" fill="rgba(120,140,93,0.12)" stroke="rgba(120,140,93,0.5)"/><text class="dglb" x="433" y="626">durable stores</text>
+        <rect class="dgext" x="540" y="616" width="12" height="12" rx="2"/><text class="dglb" x="558" y="626">external</text>
       </svg>
     </div>
 
