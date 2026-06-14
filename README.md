@@ -14,7 +14,7 @@ Static site. No build step. No dependencies. Live at **[tenwhy.pages.dev](https:
 | [`stack-map.html`](stack-map.html) | `/stack-map` | **Stack** — what runs where for Implementation 1 (Render, Cloudflare, Sapiom, OpenRouter, GitHub). |
 | [`build.html`](build.html) | `/build` | **Build** — the implementation plan. Two implementations in parallel (hand-wired vs Stripe Projects), the MVP proving loop, the build phases. Source of truth for *how* we build. |
 
-Brand mark: [`branding/tenwhy.svg`](branding/tenwhy.svg). Legacy URL redirects: [`_redirects`](_redirects).
+Tool-CLI spec: [`CONTRACT.md`](CONTRACT.md) — the versioned contract every tool conforms to (the detail behind design §9–10). Brand mark: [`branding/tenwhy.svg`](branding/tenwhy.svg). Legacy URL redirects: [`_redirects`](_redirects).
 
 Agents working in this repo: read [`AGENTS.md`](AGENTS.md) first.
 
@@ -49,6 +49,7 @@ python3 -m http.server 8000
 ├── branding/
 │   └── tenwhy.svg       # logo / favicon
 ├── _redirects           # Cloudflare Pages redirects
+├── CONTRACT.md          # the tool contract (v0) — normative CLI spec
 ├── AGENTS.md            # orientation for agents
 └── README.md            # this file
 ```
