@@ -89,6 +89,14 @@
   .btn.seq:hover { background: rgba(217,119,87,0.08); }
   .btn.seq.active { background: var(--clay); border-color: var(--clay); color: #fff; }
 
+  header.top .nav-links { display: flex; gap: 18px; align-items: center; }
+  header.top .nav-links a {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.10em;
+    color: var(--text-dim); text-decoration: none;
+  }
+  header.top .nav-links a:hover { color: var(--clay); }
+
   /* ---- Caption line ---- */
   .caption {
     min-height: 30px;
@@ -314,6 +322,7 @@
     header.top .masthead .logo { width: 84px; }
     header.top .masthead .divider { display: none; }
     header.top .eyebrow { display: none; }
+    header.top .nav-links { display: none; }
     header.top h1 { font-size: 13px; line-height: 1.15; }
     .btn { padding: 6px 10px; font-size: 10.5px; }
     .caption { font-size: 10px; padding-top: 5px; min-height: 24px; }
@@ -360,6 +369,11 @@
       <button class="btn seq" data-seq="shifts">▶ A day of shifts</button>
       <button class="btn seq" data-seq="hire">▶ Hire a specialist</button>
     </div>
+    <nav class="nav-links" aria-label="Pages">
+      <a href="design.html">Design</a>
+      <a href="stack-map.html">Stack</a>
+      <a href="build.html">Build</a>
+    </nav>
   </header>
 
   <div class="caption" id="caption" aria-live="polite">Click any stage to inspect it — or play a sequence.</div>
@@ -393,7 +407,7 @@
       <span><i style="background:var(--oat)"></i>GHOST = NOT YET HIRED</span>
     </div>
     <div>Part of <a href="https://www.10claws.com/en">10claws</a></div>
-    <div>←  <a href="design.html">design</a>  ·  <a href="stack-map.html">stack</a>  ·  <a href="build.html">build</a>  →</div>
+    <div>←  <a href="index.html">factory map</a>  ·  <a href="design.html">design</a>  ·  <a href="stack-map.html">stack</a>  ·  <a href="build.html">build</a>  →</div>
   </footer>
 
 <script>
