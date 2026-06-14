@@ -17,7 +17,6 @@ on every push to `main` via Cloudflare's native GitHub integration.
 | `branding/tenwhy.svg` | Wordmark + favicon. The brand mark (inlined into each page's masthead). |
 | `_redirects` | Cloudflare Pages redirects (e.g. legacy `/system-map` → `/design`). |
 | `CONTRACT.md` | **The tool contract** (`v0.1`) — the normative spec every tool CLI conforms to: command shape, output envelope, exit codes, plan/apply + the platform gate/broker, injected identity, introspection, conformance. Downstream of design §9–11; `agent-cli-kit verify` checks it in CI. |
-| `review.html` | **Review snapshot** (`/review`) — the reconciled Codex + AMP architecture review (verdict, every change, the edit plan, a full-system diagram). A record of the review, **not** a source of truth; the four docs above are canonical. |
 
 ## Source-of-truth hierarchy
 

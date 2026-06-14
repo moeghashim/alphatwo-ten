@@ -4,3 +4,7 @@
 # Legacy /system-map paths → /design (page was renamed)
 /system-map       /design  301
 /system-map.html  /design  301
+
+# Retired /review → folded into /design (§11 system diagram, §14 review note)
+/review       /design  301
+/review.html  /design  301

@@ -405,5 +405,5 @@ Tools declare the major they target in `spec.yaml`; Maestro routes accordingly.
   broker (§8); credential failure edges (§10); platform-finalized audit, the
   cross-fleet outcome sub-object, and ingest schema validation (§11); conformance
   ≠ security + harness-seam conformance (§12); `--describe` formal schema promoted
-  into scope. Full reconciliation: the [review](review.html).
+  into scope. Driven by the Codex + AMP architecture review (see design §11 and §14).
 - **v0** — initial contract.
