@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>tenwhy — The review, reconciled</title>
+<link rel="icon" type="image/svg+xml" href="branding/tenwhy.svg" />
+<meta name="description" content="Two adversarial reviews of the tenwhy tool-execution architecture (Codex + AMP), reconciled: the verdict, every change decided, the §8 audit resolution, the one open decision, and the edit plan." />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="tenwhy" />
+<meta property="og:title" content="tenwhy — the review, reconciled" />
+<meta property="og:description" content="Codex + AMP reviewed the architecture. Both: sound-with-changes. One gap — durable orchestration / execution authority. Here is every change, decided." />
+<meta property="og:url" content="https://tenwhy.pages.dev/review" />
+<style>
+  :root {
+    --bg: #FAF9F5;
+    --bg-2: #F0EEE6;
+    --bg-card: #FFFFFF;
+    --text: #3D3D3A;
+    --text-dim: #87867F;
+    --slate: #141413;
+    --border: #D1CFC5;
+    --border-hi: #B8B5A8;
+    --clay: #D97757;
+    --olive: #788C5D;
+    --sky: #6A8CAF;
+    --red: #B04A3F;
+    --oat: #E3DACC;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.65 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px 24px 120px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 240px;
+    gap: 48px;
+  }
+  @media (max-width: 960px) {
+    .container { grid-template-columns: minmax(0, 1fr); }
+    aside { order: -1; position: static !important; }
+  }
+  h1, h2, h3, h4 {
+    font-family: ui-serif, Georgia, "Times New Roman", serif;
+    color: var(--slate);
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+  h1 { font-size: 36px; margin: 0 0 14px; line-height: 1.2; }
+  h2 { font-size: 24px; margin: 56px 0 14px; }
+  h3 { font-size: 18px; margin: 28px 0 8px; }
+  .eyebrow {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+  p { margin: 0 0 12px; max-width: 680px; }
+  p.lead { font-size: 17px; color: var(--text); max-width: 680px; }
+  a { color: var(--clay); text-decoration: none; border-bottom: 1px dotted var(--clay); }
+  a:hover { background: rgba(217,119,87,0.08); }
+  code, .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 13px; }
+  code { background: var(--bg-2); padding: 1px 6px; border-radius: 4px; color: var(--slate); }
+
+  .pill {
+    display: inline-block;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase;
+    padding: 2px 8px; border-radius: 4px; line-height: 1.6; vertical-align: middle;
+    white-space: nowrap;
+  }
+  .pill.yes   { background: rgba(120,140,93,0.16); color: var(--olive); }
+  .pill.disc  { background: rgba(217,119,87,0.16); color: var(--clay); }
+  .pill.later { background: var(--bg-2);            color: var(--text-dim); }
+  .pill.block { background: rgba(176,74,63,0.12);   color: var(--red); }
+  .pill.note  { background: var(--bg-2);            color: var(--text-dim); }
+
+  .panel { background: var(--bg-card); border: 1.5px solid var(--border); border-radius: 14px; padding: 22px 26px; margin: 16px 0 8px; }
+  .panel h3 { margin-top: 0; }
+  .panel.tight { padding: 16px 20px; }
+  .panel.warm { border-color: rgba(217,119,87,0.35); background: #FDFCF9; }
+  .panel.olive { border-color: rgba(120,140,93,0.35); background: #FBFCF8; }
+
+  table.decisions { width: 100%; border-collapse: collapse; font-size: 14px; margin: 14px 0; }
+  table.decisions th, table.decisions td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  table.decisions th { font-family: ui-monospace, monospace; font-size: 11px; font-weight: 500; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; }
+  table.decisions td.k { color: var(--text-dim); width: 36%; }
+  table.decisions td.v { color: var(--slate); }
+
+  /* Verdict table */
+  table.verdicts { width: 100%; border-collapse: collapse; font-size: 13.5px; margin: 16px 0; }
+  table.verdicts th, table.verdicts td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  table.verdicts th { font-family: ui-monospace, monospace; font-size: 11px; font-weight: 500; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; }
+  table.verdicts td.n { color: var(--text-dim); width: 30px; font-family: ui-monospace, monospace; font-size: 12px; }
+  table.verdicts td.change { color: var(--slate); }
+  table.verdicts td.change .why { display: block; color: var(--text-dim); font-size: 12.5px; margin-top: 3px; }
+  table.verdicts td.vd { width: 96px; }
+  table.verdicts td.wh { width: 90px; }
+  table.verdicts tr.add td { background: rgba(120,140,93,0.04); }
+  table.verdicts tr.disc td { background: rgba(217,119,87,0.05); }
+
+  /* Keep / add split */
+  .split2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 18px 0; }
+  .split2 .col { border: 1.5px solid var(--border); border-radius: 14px; padding: 18px 20px; background: var(--bg-card); }
+  .split2 .col.keep { border-color: rgba(120,140,93,0.35); background: #FBFCF8; }
+  .split2 .col.add  { border-color: rgba(217,119,87,0.35); background: #FDFCF9; }
+  .split2 h4 { margin: 0 0 4px; font-size: 15px; }
+  .split2 .cap { font-family: ui-monospace, monospace; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); margin-bottom: 10px; }
+  .split2 ul { margin: 0; padding-left: 18px; }
+  .split2 li { margin: 5px 0; line-height: 1.45; }
+  .split2 code { font-size: 12px; }
+
+  /* Phase list */
+  ol.phases { list-style: none; counter-reset: ph; padding: 0; margin: 16px 0; }
+  ol.phases > li { counter-increment: ph; position: relative; padding: 14px 0 14px 70px; border-bottom: 1px solid var(--border); }
+  ol.phases > li:last-child { border-bottom: none; }
+  ol.phases > li::before { content: "Phase " counter(ph, upper-alpha); position: absolute; left: 0; top: 14px; width: 56px; text-align: center; font-family: ui-monospace, monospace; font-size: 10px; font-weight: 600; color: var(--clay); background: rgba(217,119,87,0.10); border-radius: 6px; padding: 3px 0; }
+  ol.phases > li b { color: var(--slate); font-family: ui-serif, Georgia, serif; font-size: 17px; font-weight: 500; display: block; margin-bottom: 4px; }
+  ol.phases > li .tag { font-family: ui-monospace, monospace; font-size: 10.5px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 6px; display: block; }
+
+  aside { position: sticky; top: 32px; align-self: start; background: var(--bg-card); border: 1.5px solid var(--border); border-radius: 12px; padding: 18px 18px 14px; font-size: 13.5px; }
+  aside .eyebrow { margin: 0 0 10px; }
+  aside ol { margin: 0; padding: 0 0 0 18px; }
+  aside li { margin: 5px 0; line-height: 1.45; }
+  aside li a { color: var(--text); border-bottom: none; }
+  aside li a:hover { color: var(--clay); }
+  aside .divider { border-top: 1px solid var(--border); margin: 12px -18px; }
+  aside .stat { font-size: 12.5px; color: var(--text-dim); display: flex; justify-content: space-between; margin: 4px 0; }
+  aside .stat b { color: var(--slate); font-weight: 500; }
+
+  footer.note { margin-top: 80px; padding-top: 20px; border-top: 1px solid var(--border); color: var(--text-dim); font-size: 13px; max-width: 680px; }
+
+  .site-footer { padding: 28px 24px 32px; border-top: 1px solid var(--border); text-align: center; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.10em; }
+  .site-footer a { color: var(--text-dim); text-decoration: none; border-bottom: 1px dotted var(--border-hi); }
+  .site-footer a:hover { color: var(--clay); border-bottom-color: var(--clay); }
+
+  .page-header { padding: 20px 24px; border-bottom: 1px solid var(--border); background: var(--bg); position: relative; }
+  .page-header .masthead-logo { display: block; width: 160px; height: auto; margin: 0 auto; }
+  .page-header .nav-links { position: absolute; right: 24px; top: 50%; transform: translateY(-50%); display: flex; gap: 20px; align-items: center; }
+  .page-header .nav-link { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.10em; color: var(--text-dim); text-decoration: none; border: none; background: transparent; padding: 4px 0; transition: color .15s ease; }
+  .page-header .nav-link:hover { color: var(--clay); background: transparent; }
+  @media (max-width: 720px) { .page-header .nav-links { display: none; } }
+
+  @media (max-width: 640px) {
+    .container { padding: 24px 16px 80px; gap: 28px; }
+    h1 { font-size: 28px; } h2 { font-size: 21px; margin: 40px 0 12px; } h3 { font-size: 16px; }
+    p, p.lead { font-size: 15px; max-width: none; }
+    .page-header { padding: 14px 16px; } .page-header .masthead-logo { width: 120px; }
+    code, .mono { word-break: break-word; overflow-wrap: anywhere; }
+    .panel { padding: 16px 18px; }
+    .split2 { grid-template-columns: 1fr; }
+    table.decisions, table.verdicts { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; font-size: 13px; }
+    aside { padding: 14px 16px; }
+    aside .divider { margin: 12px 0; }
+    .site-footer { padding: 22px 16px 24px; font-size: 10px; }
+  }
+</style>
+</head>
+<body>
+<header class="page-header">
+  <a href="index.html" title="tenwhy — home" aria-label="tenwhy — home"><svg class="masthead-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 45.4" role="img" aria-label="tenwhy">
+    <path fill="#161615" d="m16 13.9h-6v-7.2h-0.3c-1.7 1.9-4.2 2.9-4.8 3.4-0.3 0.2-0.2 0.2-0.2 0.9v2.8h-3c-0.2 0.1-0.4 0.2-0.4 0.5v1.7c0 0.3 0.2 0.5 0.4 0.5 1.5 0 3.1 0.3 3.1 3.7v9.6c0 4 1.6 5.8 4.3 5.8 2.6 0.2 5.5-1.3 7-2.2l0.5-0.3c0.2-0.1 0.2-0.3 0.1-0.6l-0.9-1.6c-0.4-0.5-0.8 0-0.8 0l-0.8 0.4c-0.6 0.4-1.5 0.8-2.4 0.8-1.2 0-1.8-0.9-1.8-2.6v-12.6h5.6c0.3 0 0.5-0.1 0.5-0.4v-2.2c0-0.2-0.1-0.4-0.1-0.4z"/>
+    <path fill="#161615" d="m36.4 28.7c-0.3-0.1-0.5 0.3-0.5 0.3-0.9 1.1-2.6 3.1-5.8 3.2-3 0-5.1-1.7-6.3-4.7l12.8-5.4c0.3-2.7-2.7-8.7-8.8-8.7-4.8 0-10.1 2.9-10.1 10.7 0 4.8 3 11.5 11.3 11.5 5.6 0.1 8.2-3.1 9.2-5.5 0.2-0.5-0.3-0.6-0.3-0.6l-1.5-0.8zm-9.8-12c2.3-0.1 3.7 2.2 3.6 4.8l-6.8 3.5c-0.8-3.8-0.2-8.1 3.2-8.3z"/>
+    <path fill="#161615" d="m66.8 32.6c-1.6 0-3.1-0.4-3.1-3.6v-7.7c0-5.7-2.7-7.9-7.2-7.9-4 0-6.1 2.8-7.7 4.8l0.7-5.7c-2.8 1.7-6.5 2.9-9.1 3.2-0.2 0.1-0.3 0.3-0.3 0.5v1.6c0 0.4 0.4 0.4 0.4 0.4 1.4 0.1 2.7 0.9 2.7 4.9v5.5c0 2.6-1.3 4-2.7 4h-0.8c-0.2 0-0.4 0.2-0.4 0.5v1.5c0 0.3 0.2 0.5 0.4 0.5h12.5c0.3 0 0.5-0.2 0.5-0.5v-1.5c0-0.3-0.2-0.5-0.5-0.5h-0.3c-1.3 0-2.8-1.4-2.8-4v-7.7c0.7-2 3.3-4 5.5-4 2.5 0 3.1 1.4 3.1 4.3v7.4c0 3.2-0.9 4-2 4h-0.5c-0.2 0-0.5 0.2-0.5 0.5v1.5c0 0.3 0.2 0.5 0.5 0.5h11.6c0.3 0 0.5-0.2 0.5-0.5v-1.5c0-0.3-0.2-0.5-0.5-0.5z"/>
+    <path fill="#161615" d="m104.4 13.9h-8.1c-0.3 0-0.5 0.1-0.5 0.4v1.6c0 0.3 0.2 0.5 0.5 0.5h1c1 0 1.1 1.1 0.3 2.9l-3.8 9.2-3.8-8.9c-0.9-2.4-0.4-3.2 0.9-3.2h0.6c0.3 0 0.5-0.2 0.5-0.4v-1.7c0-0.2-0.2-0.4-0.4-0.4h-10.6c-0.2 0-0.5 0.1-0.5 0.4v1.6c0 0.3 0.3 0.5 0.5 0.5h0.9c1.2 0 1.4 0.7 0.5 3l-3.7 9-3.5-8.3c-1.2-2.7-0.9-3.7 0.8-3.7 0.3 0 0.5-0.2 0.5-0.4v-1.7c0-0.2-0.2-0.4-0.4-0.4h-9.9c-0.3 0-0.5 0.1-0.5 0.4v1.6c0 0.3 0.2 0.5 0.5 0.5h0.3c1 0 1.6 0.7 2.9 3.7l6.1 14.5c0.1 0.3 0.3 0.5 0.6 0.5h2.5c0.3 0 0.5-0.2 0.6-0.5l5.3-12.9 5.9 12.9c0.1 0.3 0.3 0.5 0.6 0.5h2.6c0.3 0 0.5-0.2 0.6-0.5l7-15.7c1-2.2 1.6-2.5 2.6-2.5h0.5c0.3 0 0.4-0.2 0.4-0.5v-1.6c0-0.2-0.1-0.4-0.3-0.4z"/>
+    <path fill="#161615" d="m132.4 32.6h-0.7c-1.3 0-2.8-1.2-2.8-3.8v-8.4c0-5.1-2.7-7.1-7.1-7.1-3.4 0-5.4 1.9-7.2 4.2v-16.5c0-0.2-0.2-0.1-0.3 0-2.5 1.8-5.6 3.1-8.6 4.3-0.2 0.1-0.2 0.3-0.2 0.5v1.4c0 0.4 0.4 0.5 0.4 0.5 1.7 0 2.6 0.9 2.6 4.4v16.7c0 2.6-1.2 3.8-2.6 3.8h-0.8c-0.3 0-0.5 0.2-0.5 0.5v1.5c0 0.3 0.2 0.5 0.5 0.5h12.8c0.3 0 0.6-0.1 0.6-0.5v-1.5c-0.1-0.7-0.4-0.5-1.1-0.5-1.4 0-2.8-1.4-2.8-3.9v-8.3c0.8-1.8 3.1-3.5 5.3-3.5 2.3 0 3.2 0.9 3.2 4.4v7.3c0 2.8-0.9 4-2.1 4h-0.5c-0.3 0-0.5 0.2-0.5 0.5v1.5c0 0.3 0.2 0.5 0.5 0.5h11.9c0.3 0 0.6-0.1 0.6-0.4v-1.6c0-0.3-0.2-0.5-0.6-0.5z"/>
+    <path fill="#161615" d="m154.1 13.9h-7.9c-0.4 0-0.2 0 0 0-0.3 0-0.5 0.1-0.5 0.4v1.6c0 0.3 0.2 0.5 0.5 0.5h1c1.2 0 1.1 1.2 0.2 3.2l-3.3 7.1-3-6.8c-1.2-2.7-1-3.5 0.6-3.5h0.3c0.2 0 0.4-0.2 0.4-0.4v-1.7c0-0.3-0.2-0.5-0.4-0.5h-10.5c-0.3 0-0.5 0.2-0.5 0.5v1.6c0 0.3 0.2 0.5 0.5 0.5h0.5c0.8 0 1.3 0.3 2.6 3l6.1 12.7-4.9 10c-0.1 0.2 0 0.4 0.2 0.5l2.5 1.2c0.2 0.1 0.6 0 0.7-0.2l11.9-24.6c1.1-2.2 1.7-2.6 2.6-2.6h0.5c0.3 0 0.4-0.2 0.4-0.5v-1.6c0-0.2-0.1-0.4-0.5-0.4z"/>
+    <circle fill="#D76F4D" cx="157.4" cy="33.7" r="1.7"/>
+  </svg></a>
+  <div class="nav-links">
+    <a href="design.html" class="nav-link">The design  →</a>
+    <a href="build.html" class="nav-link">Build  →</a>
+  </div>
+</header>
+
+<div class="container">
+  <main>
+    <div class="eyebrow">tenwhy · architecture review</div>
+    <h1>The review, reconciled</h1>
+    <p class="lead">
+      The tool-execution &amp; state architecture went out for adversarial review to
+      <strong>Codex</strong> and <strong>AMP</strong>, independently. Both came back
+      <strong>sound-with-changes</strong>. They reached the same conclusion from two
+      different directions — and this page is the reconciliation: the verdict, every
+      change decided, the one conflict resolved, the one decision still open, and the
+      order we make the edits in.
+    </p>
+    <p>
+      Companions: <a href="design.html">the design</a> (source of truth) ·
+      <a href="CONTRACT.md">the tool contract</a> ·
+      <a href="build.html">the build plan</a> ·
+      <a href="stack-map.html">the stack</a>.
+    </p>
+
+
+    <h2 id="verdict">1 · The verdict</h2>
+    <div class="panel olive">
+      <p style="margin:0">
+        <span class="pill yes">sound-with-changes</span> &nbsp;<strong>×2.</strong>
+        Keep the shape — ephemeral Node-only µVM tools, the brain / Postgres / R2
+        storage split, plan/apply with a policy gate, and the CLI contract. Don't rip
+        anything out. There is <strong>one structural gap</strong>, and both reviewers
+        landed on it.
+      </p>
+    </div>
+
+
+    <h2 id="convergence">2 · Two reviews, one gap</h2>
+    <p>
+      Codex and AMP described the same missing piece in different vocabulary:
+    </p>
+    <div class="panel tight">
+      <table class="decisions" style="margin:0">
+        <tr><th>Reviewer</th><th>How they framed the gap</th></tr>
+        <tr>
+          <td class="k">Codex — <em>authority</em></td>
+          <td class="v">Execution authority belongs to the <strong>platform</strong>, not the disposable µVM. Tools propose; the platform disposes. A validated envelope <em>after</em> execution isn't control — if untrusted tool code holds a write credential before the gate, the gate is advisory.</td>
+        </tr>
+        <tr>
+          <td class="k">AMP — <em>durability</em></td>
+          <td class="v">The <strong>durable orchestration semantics</strong> your three hardest guarantees depend on were never written down. They're asserted in prose, not pinned in a contract — so they'll produce your first real incident.</td>
+        </tr>
+      </table>
+    </div>
+    <p>
+      Authority and durability are the same boundary seen from two sides. The three
+      guarantees that quietly rest on it:
+    </p>
+    <div class="panel warm">
+      <p style="margin:0 0 6px"><strong>1.</strong> Any job can crash or be re-run at any point with <strong>zero data loss and no double-effect</strong>.</p>
+      <p style="margin:0 0 6px"><strong>2.</strong> <strong>No tool moves money or mutates a live system outside an approved policy.</strong></p>
+      <p style="margin:0"><strong>3.</strong> Results are <strong>comparable across the whole fleet</strong>, so the system can self-improve from real outcomes.</p>
+    </div>
+
+
+    <h2 id="missing">3 · Not a different shape — a missing layer</h2>
+    <p>
+      Neither reviewer wants a redesign. The fix is to add one layer to the architecture
+      we have: a <strong>durable orchestration boundary</strong>, with the µVM modelled
+      as an external async activity — never a durable worker.
+    </p>
+    <div class="split2">
+      <div class="col keep">
+        <div class="cap">Keep — unchanged</div>
+        <h4>The shape is right</h4>
+        <ul>
+          <li>CLI contract (<code>CONTRACT.md</code>)</li>
+          <li>Ephemeral Node-only µVM tools</li>
+          <li>Brain / Postgres / R2 split</li>
+          <li>plan / apply + policy gate</li>
+        </ul>
+      </div>
+      <div class="col add">
+        <div class="cap">Add — the missing spec</div>
+        <h4>Durable orchestration</h4>
+        <ul>
+          <li>Job state machine: <code>queued → dispatched → running → awaiting_approval → applying → {succeeded · partial · failed · timed_out}</code></li>
+          <li>Per-apply-item <strong>idempotency ledger</strong></li>
+          <li>Outbox / inbox dedupe — <code>unique(job_id, event, external_id)</code></li>
+          <li>Leases + per-agent no-overlap locks</li>
+          <li>Approval as a <strong>durable wait</strong> (hours/days)</li>
+          <li>Reconciliation: effect-happened-but-webhook-lost</li>
+        </ul>
+      </div>
+    </div>
+    <p>
+      <span class="pill note">backend</span> &nbsp;For the MVP this is a
+      <strong>Postgres-backed state machine + transactional outbox/inbox — no new
+      vendor</strong>. A durable engine (Inngest / Restate) is a later swap behind the
+      <em>same</em> interface. Note the trap both reviews flag: an engine gives you
+      timers, retries, and waits — it does <strong>not</strong> give exactly-once
+      external effects, trustworthy audit, or spend caps. Those come from idempotency
+      keys, credential scoping, and platform-side ledgers regardless of engine. Don't
+      let "we added Inngest" create false confidence.
+    </p>
+
+
+    <h2 id="table">4 · Every change, decided</h2>
+    <p>
+      Fourteen recommendations across the two reviews. <strong>None rejected</strong> —
+      both were well-grounded. Where I push back it's on <em>scope or timing</em>, noted
+      in place. <span class="pill block">blocking</span> = must land before any
+      money-moving tool ships.
+    </p>
+    <table class="verdicts">
+      <tr><th class="n">#</th><th>Change</th><th>Verdict</th><th>When</th></tr>
+      <tr>
+        <td class="n">1</td>
+        <td class="change">Durable orchestration spec — state machine, idempotency ledger, outbox/inbox, leases, reconciliation<span class="why">The core. Postgres for MVP; defer the engine.</span></td>
+        <td class="vd"><span class="pill yes">accept</span></td>
+        <td class="wh"><span class="pill block">blocking</span></td>
+      </tr>
+      <tr>
+        <td class="n">2</td>
+        <td class="change">Concrete per-item idempotency mechanism, kit-implemented<span class="why">"Record intent → execute → confirm" where APIs lack idempotency keys.</span></td>
+        <td class="vd"><span class="pill yes">accept</span></td>
+        <td class="wh"><span class="pill block">blocking</span></td>
+      </tr>
+      <tr>
+        <td class="n">3</td>
+        <td class="change">Platform-finalized audit — resolve the design §8 ↔ CONTRACT §11 conflict<span class="why">Platform renders + commits the canonical record. See §5 below.</span></td>
+        <td class="vd"><span class="pill yes">accept</span></td>
+        <td class="wh"><span class="pill block">blocking</span></td>
+      </tr>
+      <tr>
+        <td class="n">6</td>
+        <td class="change">Preflight spend cap before dispatch + provider-side hard limits, both impls<span class="why">Self-reported post-hoc cost summing isn't enforcement.</span></td>
+        <td class="vd"><span class="pill yes">accept</span></td>
+        <td class="wh"><span class="pill block">blocking</span></td>
+      </tr>
+      <tr>
+        <td class="n">7</td>
+        <td class="change">Gate recomputes impact from raw params + read-back; plan expiry / re-validation<span class="why">A self-reported <code>projected_impact</code> the gate trusts is a hole.</span></td>
+        <td class="vd"><span class="pill yes">accept</span></td>
+        <td class="wh"><span class="pill block">blocking</span></td>
+      </tr>
+      <tr>
+        <td class="n">4</td>
+        <td class="change"><code>verify</code> is a quality gate, not a security boundary; enumerate runtime controls<span class="why">CI checks shape, not runtime. Confirm the sandbox enforces egress.</span></td>
+        <td class="vd"><span class="pill yes">accept</span></td>
+        <td class="wh"><span class="pill later">hardening</span></td>
+      </tr>
+      <tr>
+        <td class="n">5</td>
+        <td class="change">Credential failure edges — refresh/retry, plan-vs-apply scope split, replay nonce, escape hatch<span class="why">Several get simpler once #3 removes the write token from the µVM.</span></td>
+        <td class="vd"><span class="pill yes">accept</span></td>
+        <td class="wh"><span class="pill later">hardening</span></td>
+      </tr>
+      <tr>
+        <td class="n">8</td>
+        <td class="change">Abstract queue/scheduler behind one event interface + conformance suite<span class="why">The portability discipline the two-impl thesis requires.</span></td>
+        <td class="vd"><span class="pill yes">accept</span></td>
+        <td class="wh"><span class="pill later">after</span></td>
+      </tr>
+      <tr>
+        <td class="n">9</td>
+        <td class="change">"side-effect-free / replayable" instead of "pure function"; record model+prompt+input versions<span class="why">LLM stages aren't deterministic — corrects our own wording.</span></td>
+        <td class="vd"><span class="pill yes">accept</span></td>
+        <td class="wh"><span class="pill later">after</span></td>
+      </tr>
+      <tr>
+        <td class="n">10</td>
+        <td class="change">Name the "Node-only ⇒ non-Node-is-a-service" boundary; drop per-boot <code>git clone</code><span class="why">Prebake / shallow-clone / pull from R2.</span></td>
+        <td class="vd"><span class="pill yes">accept</span></td>
+        <td class="wh"><span class="pill later">after</span></td>
+      </tr>
+      <tr>
+        <td class="n">11</td>
+        <td class="change">"Comparable" is oversold — add a mandatory cross-fleet outcome sub-object + validate <code>data</code> at ingest<span class="why">Queryable ≠ comparable. Design the fixed dimensions <em>now</em> so tools adopt them day one.</span></td>
+        <td class="vd"><span class="pill yes">accept</span></td>
+        <td class="wh"><span class="pill later">after</span></td>
+      </tr>
+      <tr>
+        <td class="n">12</td>
+        <td class="change">Two-tier verbs — a closed fleet-wide set (CRUD + plan/apply) + tool-local stage verbs <em>declared</em> in <code>--describe</code><span class="why">Reframed from AMP's binary: the guarantee binds tier 1; tier 2 is discovered, never guessed.</span></td>
+        <td class="vd"><span class="pill yes">accept</span></td>
+        <td class="wh"><span class="pill later">after</span></td>
+      </tr>
+      <tr class="add">
+        <td class="n">A</td>
+        <td class="change">Assign harness-seam conformance (CLI envelope → job-contract adapter)<span class="why">AMP appendix — unassigned to either <code>verify</code> or the Reviewer today.</span></td>
+        <td class="vd"><span class="pill yes">accept</span></td>
+        <td class="wh"><span class="pill later">after</span></td>
+      </tr>
+      <tr class="disc">
+        <td class="n">B</td>
+        <td class="change">Warm path for 24/7 latency-sensitive work (e.g. Sal, support)<span class="why">Premature — Sal is tier-2 roadmap; MVP is Maestro + Jon. Note it, don't build it.</span></td>
+        <td class="vd"><span class="pill disc">defer</span></td>
+        <td class="wh"><span class="pill later">later</span></td>
+      </tr>
+      <tr class="disc">
+        <td class="n">C</td>
+        <td class="change">Who holds the external write credential during <code>apply</code> — broker vs scoped-cred-in-µVM<span class="why">The one place Codex and AMP differ. See §6.</span></td>
+        <td class="vd"><span class="pill disc">discuss</span></td>
+        <td class="wh"><span class="pill later">pre-apply</span></td>
+      </tr>
+    </table>
+
+
+    <h2 id="audit">5 · The conflict, resolved — platform-finalized audit</h2>
+    <p>
+      The docs contradicted themselves: <a href="design.html">design §8</a> said the
+      µVM commits the brain and writes Postgres <em>inside the run</em>;
+      <a href="CONTRACT.md">CONTRACT §11</a> and the build MVP said only the platform
+      writes after validation. So the audit record design §8 sells as "cryptographically
+      auditable" was authored by the <em>least-trusted</em> component.
+    </p>
+    <div class="panel tight">
+      <table class="decisions" style="margin:0">
+        <tr><th>Before (conflicted)</th><th>After (platform-finalized)</th></tr>
+        <tr>
+          <td class="v">µVM writes Postgres + commits the brain in-run. The HMAC proves "a µVM with our token wrote this text" — not "a validated action occurred."</td>
+          <td class="v">µVM returns envelope + artifacts + <em>proposed</em> brain diffs. The <strong>platform</strong> validates, dedupes the webhook, verifies the plan checksum, writes <code>action_log</code>, <strong>renders</strong> the canonical <code>history.html</code>/<code>timeline.html</code> from a trusted template over validated data, and <strong>commits</strong> with the scoped token.</td>
+        </tr>
+      </table>
+    </div>
+    <p>
+      Tools still <em>author</em> report content and propose updates — only
+      <strong>authority over the canonical record</strong> moves. The brain stays
+      customer-owned and exportable, so design §8's portability claims survive. We keep
+      the platform a <em>generic finalizer</em>, not a domain author, so the "near-free
+      new tool" goal survives too. Bonus: the µVM no longer needs a GitHub
+      <em>write</em> token at all — the credential surface shrinks.
+      <a href="design.html">design.html</a> stays source of truth; <code>CONTRACT.md</code>
+      reconciles downstream.
+    </p>
+
+
+    <h2 id="decision">6 · The one open decision</h2>
+    <p>
+      The only thing the two reviews don't settle between them:
+      <strong>who holds the external write credential during <code>apply</code>?</strong>
+    </p>
+    <div class="panel tight">
+      <table class="decisions" style="margin:0">
+        <tr><th>Option</th><th>What it means</th></tr>
+        <tr><td class="k">Codex — broker (stronger)</td><td class="v">The µVM <strong>never</strong> holds the credential for a gated action. A platform broker holds it and executes only the approved plan. The gate is strictly authoritative.</td></tr>
+        <tr><td class="k">AMP — scoped cred (lighter)</td><td class="v">The apply-µVM <em>may</em> hold a tightly-scoped write credential; safety comes from idempotency keys + the action-items ledger + gate recomputation + reconciliation.</td></tr>
+      </table>
+    </div>
+    <div class="panel warm">
+      <p style="margin:0 0 8px"><strong>Recommendation — decide per provider, by one rule:</strong> can the write credential be scoped tightly enough, <em>and</em> the provider enforce a hard cap, that a misbehaving µVM holding it cannot exceed the already-approved blast radius?</p>
+      <p style="margin:0 0 8px"><strong>Yes</strong> (token scoped to specific campaigns + provider-side hard spend cap) → AMP's lighter model is enough. &nbsp; <strong>No</strong> (broad account token) → Codex's broker is required.</p>
+      <p style="margin:0">Default to the <strong>broker</strong>; allow scoped-cred only where scoping + caps are <em>verified</em>. Either way, changes 1, 2, 6, 7 are required regardless. <strong>Not due until the first money-moving tool</strong> — the MVP has no external writes — so it doesn't block starting.</p>
+    </div>
+
+
+    <h2 id="plan">7 · The edit plan</h2>
+    <p>Ordered, keyed to files. Nothing edited yet — this is the proposal.</p>
+    <ol class="phases">
+      <li>
+        <b>Blocking — before any apply/money-moving tool</b>
+        <code>design.html</code>: rewrite §8 (platform-finalized audit); add a new "Durable orchestration" § (state machine + ledger + outbox/inbox + reconciliation); amend §9 (preflight + provider spend caps; split runtime vs external spend; proposed-vs-executed status). &nbsp;<code>CONTRACT.md</code>: new orchestration § (downstream of design); §8 (per-item idempotency + gate recomputation + plan expiry/checksum/approval-id); §11 (reconcile to platform-finalized writes). &nbsp;<code>build.html §2</code>: replace the happy-path MVP with a <strong>failure-handling test matrix</strong> — retry, duplicate webhook, lost webhook, crash before/after apply, projection rebuild, brain-commit validation.
+        <span class="tag">changes 1 · 2 · 3 · 6 · 7 — the highest-value pass</span>
+      </li>
+      <li>
+        <b>Security &amp; credential hardening</b>
+        <code>CONTRACT.md §10/§12</code> + <code>stack-map §7</code>: <code>verify</code> ≠ security; enumerate runtime controls; token-refresh/retry, plan-vs-apply scope split, replay nonce, register-once escape hatch. &nbsp;<code>build.html §7</code>: add "confirm the sandbox enforces egress allow-listing" as an open-verification item.
+        <span class="tag">changes 4 · 5</span>
+      </li>
+      <li>
+        <b>Doc-tightening</b>
+        Queue abstraction (<code>build</code>); "side-effect-free/replayable" wording (<code>CONTRACT §7</code>); Node-only boundary (<code>stack §3</code>); cross-fleet outcome sub-object + ingest validation (<code>CONTRACT §11</code> — design the dims now); two-tier verbs (<code>CONTRACT §1</code>); harness-seam conformance (<code>CONTRACT</code>/<code>AGENTS</code>).
+        <span class="tag">changes 8 · 9 · 10 · 11 · 12 · A</span>
+      </li>
+      <li>
+        <b>Close out</b>
+        Bump <code>CONTRACT.md</code> to <strong>v0.1</strong> with a changelog; record the two pending decisions (broker vs scoped-cred · the warm path) as explicit "still open" items.
+        <span class="tag">decisions B · C parked, not lost</span>
+      </li>
+    </ol>
+
+
+    <h2 id="next">8 · Where this sits</h2>
+    <p>
+      This page is a <strong>snapshot of the review</strong>, not a source of truth — the
+      docs stay canonical in the <a href="AGENTS.md">AGENTS.md</a> hierarchy
+      (design → build → stack → contract). The full reviews live on the
+      <code>review/architecture-response</code> branch (PR #3), deliberately not merged to
+      <code>main</code>. Two decisions remain open (§6 and change B); everything else is
+      accepted and queued in the plan above.
+    </p>
+
+    <footer class="note">
+      Generated from the Codex + AMP reviews of <code>review-request.md</code>, reviewed at
+      commit <code>69c02b7</code>. Verdict: sound-with-changes. 12 changes accepted, 1
+      added, 2 open.
+    </footer>
+  </main>
+
+  <aside>
+    <div class="eyebrow">On this page</div>
+    <ol>
+      <li><a href="#verdict">The verdict</a></li>
+      <li><a href="#convergence">Two reviews, one gap</a></li>
+      <li><a href="#missing">The missing layer</a></li>
+      <li><a href="#table">Every change, decided</a></li>
+      <li><a href="#audit">The §8 conflict, resolved</a></li>
+      <li><a href="#decision">The one open decision</a></li>
+      <li><a href="#plan">The edit plan</a></li>
+      <li><a href="#next">Where this sits</a></li>
+    </ol>
+
+    <div class="divider"></div>
+    <div class="eyebrow">Status</div>
+    <div class="stat"><span>Reviewers</span><b>Codex · AMP</b></div>
+    <div class="stat"><span>Verdict</span><b>sound-with-changes</b></div>
+    <div class="stat"><span>Accepted</span><b>12 + 1</b></div>
+    <div class="stat"><span>Rejected</span><b>0</b></div>
+    <div class="stat"><span>Blocking</span><b>5</b></div>
+    <div class="stat"><span>Still open</span><b>2</b></div>
+
+    <div class="divider"></div>
+    <div class="eyebrow">Companions</div>
+    <div style="font-size:12.5px; line-height:1.8;">
+      <div><a href="design.html" style="color:var(--text); border:none;">The design</a></div>
+      <div><a href="CONTRACT.md" style="color:var(--text); border:none;">The tool contract</a></div>
+      <div><a href="build.html" style="color:var(--text); border:none;">Build</a></div>
+      <div><a href="stack-map.html" style="color:var(--text); border:none;">Stack</a></div>
+    </div>
+  </aside>
+</div>
+
+<footer class="site-footer">
+  Part of <a href="https://www.10claws.com/en">10claws</a>
+</footer>
+
+</body>
+</html>
