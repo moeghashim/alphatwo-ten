@@ -265,9 +265,10 @@ sync mechanically — never hand-edited apart.
 
 `--describe` emits machine JSON: every command, its verb family and
 **read/write** class, its flags, its result schema id+version, and the
-`contract_version`. Maestro routes on this; it never parses `--help`. Because
-all three derive from the schema, "the docs drifted from the code" is structurally
-impossible.
+`contract_version`. The shape:
+`{ contract_version, tool, commands: [{ name, verb, tier (1|2), rw, flags: [{ name, type, required }], result_schema }] }`.
+Maestro routes on this; it never parses `--help`. Because all three derive from
+the schema, "the docs drifted from the code" is structurally impossible.
 
 This makes fleet documentation collapse to **one fleet-level skill** ("every
 tenwhy CLI obeys this contract") plus a two-line purpose stub per tool. A new tool
@@ -338,11 +339,13 @@ cannot corrupt operational state or the audit trail.
 A schema-tagged `data` blob is *queryable*; it is not automatically *comparable*
 across tools. Two requirements close that gap:
 
-- **A mandatory cross-fleet outcome sub-object** every result populates —
-  `meta.outcome` with a fixed shape: `cost`, `projected_impact`,
-  `realized_impact`, and a small fixed set of dimensions. This is the spine
-  self-improvement compares across the whole fleet; its dimensions are designed
-  once, up front, so every tool adopts them on day one.
+- **A mandatory cross-fleet outcome sub-object** every result populates. The
+  fixed shape, designed once so every tool adopts it on day one:
+  `meta.outcome = { unit, projected, realized, cost_usd, confidence }` — `unit`
+  from a small fleet enum (`usd · rank · pct · count · ms`), `projected` set at
+  plan time, `realized` filled at reconciliation, `confidence` in 0–1.
+  Tool-specific detail stays in `data`; this sub-object is the comparable spine
+  self-improvement reads across the whole fleet.
 - **Ingest validates `data` against the registered schema** for `meta.schema`
   and **rejects on mismatch**. "Comparable across the fleet" is a property the
   platform enforces at ingest — not a hope.

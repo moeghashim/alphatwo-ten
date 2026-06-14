@@ -730,12 +730,12 @@
 
 
     <h2 id="open">9 · Still open — for a later session</h2>
-    <p>Things we didn't get to. None block starting v0.1.</p>
+    <p>Each now has a decided approach (below). None block starting v0.1.</p>
     <table class="kv">
       <tr><th>Area</th><th>Question</th></tr>
-      <tr><td class="k">CI/CD</td><td class="v">Render's GitHub-deploy hook is fine for Maestro/dashboard. Tool repos don't deploy — they get cloned into µVMs. Do we add a GitHub Action that validates tool repos (lint Skill, test CLI) on every push? Probably yes; spec TBD.</td></tr>
-      <tr><td class="k">Backups</td><td class="v">Postgres: Render snapshots are fine. R2: bucket replication. Brain repos: GitHub is already canonical. Disaster recovery drills not specified.</td></tr>
-      <tr><td class="k">Rate limiting</td><td class="v">Cloudflare in front gives basic DDoS. Need a per-customer rate limit on Maestro's webhook + dashboard API. Probably token-bucket in Postgres.</td></tr>
+      <tr><td class="k">CI/CD</td><td class="v"><strong>Decided.</strong> Maestro/dashboard deploy via Render's GitHub hook. Each <code>tenwhy-tools/&lt;name&gt;</code> repo runs a GitHub Action on push — <code>agent-cli-kit verify</code> (contract conformance) + Skill lint + CLI tests + the harness-seam check. Green is the gate to publish into the catalog: the automated half of the factory's Reviewer.</td></tr>
+      <tr><td class="k">Backups / DR</td><td class="v"><strong>Decided.</strong> Postgres → Render automated snapshots + periodic logical dumps to R2. R2 → cross-region bucket replication. Brain repos → GitHub is canonical (already durable) + a periodic mirror. Secrets → the vault is the source of truth. Plus a <strong>quarterly restore drill</strong> so recovery is exercised, not assumed.</td></tr>
+      <tr><td class="k">Rate limiting</td><td class="v"><strong>Decided.</strong> Cloudflare in front for DDoS; a per-customer <strong>token-bucket</strong> (Postgres, or Upstash if it gets hot) on Maestro's webhook + the dashboard API, keyed by the same <code>customer_id</code> as RLS.</td></tr>
       <tr><td class="k">Cost ceiling per customer</td><td class="v"><strong>Resolved (design #31)</strong> — enforced ahead of the fact: a preflight monthly-cap check before dispatch + provider-side hard limits on both impls; self-reported <code>cost_usd</code> is reconciliation only. Better Stack alerting still wanted.</td></tr>
     </table>
   </main>

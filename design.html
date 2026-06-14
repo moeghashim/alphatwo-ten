@@ -1111,12 +1111,13 @@
     <table class="decisions">
       <tr><th>Open decision</th><th>Shape</th></tr>
       <tr><td class="k"><span class="pill open">open</span> Write-credential model for <code>apply</code></td><td class="v">Platform broker holds the credential and executes (strict) vs. a tightly-scoped credential in the apply-µVM (lighter). Decide per provider; default to the broker. <strong>Narrowed by #25:</strong> for ad/commerce providers the credential is the customer's own OAuth token — already scoped to their account and provider-capped — which makes the lighter scoped-cred model viable there. Due before the first money-moving tool. (§11)</td></tr>
-      <tr><td class="k"><span class="pill open">open</span> Warm path for 24/7 work</td><td class="v">Latency-sensitive, high-frequency roles (e.g. Sal, support) fit poorly with boot-a-µVM-per-event. A warm execution path may be needed. Deferred — Sal is tier-2 roadmap; the MVP is Maestro + Jon.</td></tr>
+      <tr><td class="k"><span class="pill note">direction</span> Warm path for 24/7 work</td><td class="v"><strong>Direction set:</strong> latency-sensitive, high-frequency roles (e.g. Sal, support) get a <strong>warm path</strong> — a small pre-warmed µVM pool, or a long-lived per-customer worker for that one role — so there's no cold boot per event. Kept <em>separate</em> from the default cold-per-job model so it doesn't infect the uniform path. Implementation deferred until a 24/7 role is on the near roadmap; the MVP is Maestro + Jon.</td></tr>
     </table>
     <div class="panel" style="background:rgba(120,140,93,0.08); border-color:rgba(120,140,93,0.35)">
       <p style="margin:0">
-        <span class="pill locked">status</span> &nbsp;<strong>32 decisions locked, 2 open.</strong>
-        Each locked decision is still changeable; the two open ones are scheduled, not forgotten.
+        <span class="pill locked">status</span> &nbsp;<strong>32 decisions locked.</strong> The two
+        trailing decisions now each have a direction set (credential model narrowed by #25; warm
+        path scoped), with implementation deferred — scheduled, not forgotten.
       </p>
     </div>
     <h3>What naturally comes next</h3>
@@ -1154,7 +1155,7 @@
     <div class="divider"></div>
     <div class="eyebrow">Status</div>
     <div class="stat"><span>Decisions locked</span><b>32</b></div>
-    <div class="stat"><span>Still open</span><b>2</b></div>
+    <div class="stat"><span>Deferred (dir. set)</span><b>2</b></div>
     <div class="stat"><span>v0.1 scope</span><b>Maestro only</b></div>
     <div class="stat"><span>MVP loop</span><b>Maestro + Jon</b></div>
     <div class="stat"><span>First agent hired</span><b>—</b></div>
