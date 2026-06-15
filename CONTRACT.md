@@ -377,7 +377,7 @@ the factory Reviewer gates it, so the two contracts can't drift apart at the sea
 
 ## Out of scope for v0.1 (named, not solved)
 
-- **Two open architecture decisions** the review left ([design §14](design.html#open)):
+- **Two open architecture decisions** the review left ([design §15](design.html#open)):
   the write-credential model for `apply` (broker vs scoped-cred-in-µVM), and a
   warm execution path for 24/7 latency-sensitive work. Neither blocks the MVP.
 - Cross-tool transactions (one `apply` spanning two tools). Today each tool's
@@ -405,5 +405,5 @@ Tools declare the major they target in `spec.yaml`; Maestro routes accordingly.
   broker (§8); credential failure edges (§10); platform-finalized audit, the
   cross-fleet outcome sub-object, and ingest schema validation (§11); conformance
   ≠ security + harness-seam conformance (§12); `--describe` formal schema promoted
-  into scope. Driven by the Codex + AMP architecture review (see design §11 and §14).
+  into scope. Driven by the Codex + AMP architecture review (see design §11 and §15).
 - **v0** — initial contract.
