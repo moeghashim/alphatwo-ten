@@ -112,7 +112,9 @@
   .caption.live { color: var(--clay); }
 
   /* ---- Diagram ---- */
-  .stage-wrap { padding: 4px 18px 26px; }
+  .stage { position: relative; }
+  .stage-scroll { padding: 4px 18px 26px; }
+  .pan-hint { display: none; }
   svg.map {
     display: block;
     width: 100%;
@@ -326,7 +328,36 @@
     header.top h1 { font-size: 13px; line-height: 1.15; }
     .btn { padding: 6px 10px; font-size: 10.5px; }
     .caption { font-size: 10px; padding-top: 5px; min-height: 24px; }
-    .stage-wrap { padding: 2px 8px 16px; }
+    .stage-scroll {
+      padding: 2px 12px 14px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      overscroll-behavior-x: contain;
+    }
+    .stage-scroll::-webkit-scrollbar { display: none; }
+    svg.map {
+      width: 1040px;       /* fixed legible size — names ~16px, not 5px */
+      max-width: none;
+      height: auto;
+      margin: 0;
+    }
+    .pan-hint {
+      display: block;
+      position: absolute;
+      right: 14px; bottom: 24px;
+      font-family: ui-monospace, monospace;
+      font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--text-dim);
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      padding: 5px 11px; border-radius: 999px;
+      box-shadow: 0 2px 12px rgba(20,20,19,0.10);
+      pointer-events: none; z-index: 6;
+      transition: opacity .45s ease;
+    }
+    .pan-hint.gone { opacity: 0; }
     .drawer {
       top: auto; right: 0; left: 0; bottom: 0;
       width: 100%; max-width: none;
@@ -379,7 +410,8 @@
 
   <div class="caption" id="caption" aria-live="polite">Click any stage to inspect it — or play a sequence.</div>
 
-  <div class="stage-wrap">
+  <div class="stage" id="stage">
+   <div class="stage-scroll" id="stageScroll">
     <svg class="map" id="map" viewBox="0 0 1320 790" xmlns="http://www.w3.org/2000/svg" aria-label="tenwhy system diagram">
       <!-- zones -->
       <text class="zone-label" x="40" y="44">● Factory · shared infrastructure</text>
@@ -393,6 +425,8 @@
       <g id="extras"></g>
       <g id="packets"></g>
     </svg>
+   </div>
+   <div class="pan-hint" id="panHint" aria-hidden="true">drag to explore →</div>
   </div>
 
   <aside class="drawer" id="drawer" role="dialog" aria-label="Stage detail" aria-modal="false">
@@ -688,6 +722,7 @@ function openDrawer(id) {
   const { n, d } = drawerData(id);
   document.querySelectorAll('.node.selected').forEach(x => x.classList.remove('selected'));
   document.querySelector(`.node[data-id="${id}"]`)?.classList.add('selected');
+  panTo(id);
   drawerContent.innerHTML = `
     <div class="d-eyebrow"><span class="dot" style="background:${ZONE_COLOR[n.zone]}"></span>${ZONE_NAME[n.zone]} · ${n.num.toUpperCase()}</div>
     <h2>${d.headline}</h2>
@@ -724,11 +759,29 @@ function pulse(id, on = true) {
   const n = document.querySelector(`.node[data-id="${id}"]`);
   if (!n) return;
   document.querySelectorAll('.node.pulsing').forEach(x => x.classList.remove('pulsing'));
-  if (on) n.classList.add('pulsing');
+  if (on) { n.classList.add('pulsing'); panTo(id); }
 }
 function clearPulses() { document.querySelectorAll('.node.pulsing').forEach(x => x.classList.remove('pulsing')); }
+
+/* On mobile the diagram is wider than the viewport and pans horizontally.
+   panTo centers a node in the scroll container so sequences (and taps) follow
+   the action instead of it happening off-screen. No-op when not scrollable. */
+const stageScroll = $('stageScroll');
+const panHint = $('panHint');
+function panTo(id) {
+  if (!stageScroll || stageScroll.scrollWidth <= stageScroll.clientWidth + 4) return;
+  const n = byId[id]; if (!n) return;
+  const svg = $('map');
+  const scale = svg.getBoundingClientRect().width / 1320;
+  const scRect = stageScroll.getBoundingClientRect();
+  const nodeViewportX = svg.getBoundingClientRect().left + (n.x + n.w / 2) * scale;
+  const delta = nodeViewportX - (scRect.left + stageScroll.clientWidth / 2);
+  stageScroll.scrollBy({ left: delta, behavior: REDUCED ? 'auto' : 'smooth' });
+}
+stageScroll?.addEventListener('scroll', () => panHint?.classList.add('gone'), { once: true });
 function placePacket(p, id) { const n = byId[id]; p.style.transform = `translate(${cx(n)}px, ${cy(n)}px)`; }
 async function movePacket(g, p, id) {
+  panTo(id);              // camera follows the packet to its destination (mobile)
   placePacket(p, id);
   await wait(MOVE_MS || 60);
   return alive(g);
@@ -788,6 +841,7 @@ const SEQUENCES = {
 
     setCaption('One catalog entry → three companies hire in parallel.');
     rowGhost(1, false); rowGhost(2, false);
+    panTo('hire-1');
     await wait(650); if (!alive(g)) return;
 
     const p2 = makePacket('var(--sky)'), p3 = makePacket('var(--sky)');
@@ -800,6 +854,7 @@ const SEQUENCES = {
     await wait(MOVE_MS + 350); if (!alive(g)) return;
 
     packets.forEach((pk, i) => placePacket(pk, `work-${i}`));
+    panTo('work-1');
     await wait(MOVE_MS + 500); if (!alive(g)) return;
 
     packets.forEach(pk => pk.classList.remove('visible'));
