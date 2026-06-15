@@ -1085,7 +1085,70 @@
 
 
     <!-- =========================================== -->
-    <h2 id="roadmap">12 · The hiring roadmap</h2>
+    <h2 id="eval">12 · Evaluation &amp; the improvement loop</h2>
+    <p>
+      "Evaluation" in this system isn't one component — it's <strong>gates at three points in the
+      lifecycle</strong>, each checking a different thing. Together they hold quality up; what they
+      do <em>not</em> yet form is a <strong>loop that makes the system better over time</strong>.
+      This section names what exists and marks what is deliberately still open.
+    </p>
+
+    <h3>The gates that exist today</h3>
+    <table class="decisions">
+      <tr><th>Gate · stage</th><th>What it evaluates</th></tr>
+      <tr><td class="k"><strong>Reviewer</strong> · build-time</td><td class="v">In the factory: runs the tests, audits the <code>SKILL.md</code>, and checks the tool's emitted output against the contract schema — the <em>same gate as lint/test failures</em> (§9). Critique is bucketed <code>[MUST]/[SHOULD]/[NICE]/[ASK]</code>, loops with the Executor up to three rounds, and zero <code>[MUST]</code> is the bar to ship. <strong>Evaluates the tool.</strong></td></tr>
+      <tr><td class="k"><strong><code>agent-cli-kit verify</code></strong> · build-time</td><td class="v">Contract conformance as a CI quality gate — <em>shape, not runtime</em> (#32). A tool that doesn't conform doesn't ship. <strong>Evaluates the tool's contract.</strong></td></tr>
+      <tr><td class="k"><strong>The policy gate</strong> · action-time</td><td class="v">A deterministic, platform-side recompute of spend caps, allow-lists, and time rules <em>before</em> the broker executes; spend is bounded ahead of the fact (#31, §11). <strong>Evaluates whether an action is permitted</strong> — not whether it is good.</td></tr>
+      <tr><td class="k"><strong>Reconciliation</strong> · after the fact</td><td class="v">A sweep that reads external truth back against the ledger to close the "effect happened, webhook lost" gap (§11). <strong>Evaluates system consistency.</strong></td></tr>
+    </table>
+    <p>
+      Notice the absence: each gate checks the <em>tool</em>, the <em>action</em>, or the
+      <em>system</em> — <strong>none checks whether the work achieved its goal.</strong>
+    </p>
+
+    <h3>The seam — outcome eval</h3>
+    <p>
+      The one place real outcome measurement already appears is <em>inside a tool</em>: a domain
+      specialist that scores its own output. <strong>Max</strong> auditing a site with
+      <strong>Lighthouse</strong> — a concrete SEO/performance number — is an outcome eval. But the
+      loop stops there: Max <em>suggests</em> changes, Maestro acknowledges "would execute," and
+      nothing re-measures. The audit layer (§8) already records every action, so the <strong>data
+      to evaluate outcomes exists</strong> — nothing consumes it yet.
+    </p>
+
+    <h3>The loop that isn't closed yet</h3>
+    <p>Self-improvement is what closes it:</p>
+    <div class="panel tight">
+      <p class="mono" style="margin:0; line-height:1.7">
+        measure <span style="color:var(--text-dim)">(outcome eval)</span> →
+        attribute <span style="color:var(--text-dim)">(which tool / prompt / decision — from the audit trail, §8)</span> →
+        propose <span style="color:var(--text-dim)">(a new tool version, prompt, or guardrail)</span> →
+        gate <span style="color:var(--text-dim)">(Reviewer + <code>verify</code> + the policy gate)</span> →
+        ship → re-measure
+      </p>
+    </div>
+    <p>
+      The <strong>substrate is already here</strong>: the audit trail is the feedback store, and the
+      Reviewer, <code>verify</code>, and the policy gate/broker are the gates a change would pass
+      through. What's missing is two things — <strong>(a)</strong> a standing
+      <strong>outcome-eval layer</strong> per domain (Max + Lighthouse is the template), and
+      <strong>(b)</strong> an <strong>auto-proposer</strong> that turns eval misses into specs the
+      factory builds.
+    </p>
+    <p>
+      The stance holds even when it closes: it stays <strong>propose → gate → decide</strong>, not
+      autonomous self-modification — the same posture as customer-approved hires and gated actions
+      everywhere else here. Today the system <em>grows</em> (the factory commissions new tools and
+      hires — §13) and <em>refines a tool within a build</em> (the Reviewer's three rounds); it does
+      not yet <em>learn from outcomes across time</em>.
+    </p>
+    <table class="decisions">
+      <tr><th>Open</th><th>Shape</th></tr>
+      <tr><td class="k"><span class="pill open">open</span> Outcome eval + the improvement loop</td><td class="v">No standing eval of <em>work quality</em>, and no closed loop — distinct from the §15 open <em>decisions</em>: this is a decided-but-unbuilt capability, not an undecided choice. Substrate exists (audit trail = feedback store; Reviewer / <code>verify</code> / gate = the safety gates). Needs (1) a per-domain outcome-eval layer (Max + Lighthouse is the template) and (2) an auto-proposer that turns eval misses into tool specs for the factory. Stays propose→gate→decide; due when the first metric-driven role ships.</td></tr>
+    </table>
+
+    <!-- =========================================== -->
+    <h2 id="roadmap">13 · The hiring roadmap</h2>
     <p>
       Once Maestro is live, the factory's job is to <strong>build the next specialist's tool</strong>
       and ship it into the catalog. When the customer (or Maestro) decides they need that role,
@@ -1134,7 +1197,7 @@
 
 
     <!-- =========================================== -->
-    <h2 id="locked">13 · Decisions locked</h2>
+    <h2 id="locked">14 · Decisions locked</h2>
     <p>Each one is now a constraint on everything downstream.</p>
     <table class="decisions">
       <tr><th>#</th><th>Decision</th></tr>
@@ -1174,7 +1237,7 @@
 
 
     <!-- =========================================== -->
-    <h2 id="open">14 · Still on the grill</h2>
+    <h2 id="open">15 · Still on the grill</h2>
     <p>
       <span class="pill note">how this was reviewed</span> &nbsp;This architecture was
       pressure-tested by two independent adversarial reviews (Codex + AMP). Verdict:
@@ -1222,6 +1285,7 @@
       <li><a href="#contract">The job contract</a></li>
       <li><a href="#tool">What a tool actually is</a></li>
       <li><a href="#orchestration">Durable orchestration</a></li>
+      <li><a href="#eval">Evaluation &amp; improvement</a></li>
       <li><a href="#roadmap">Hiring roadmap</a></li>
       <li><a href="#locked">Decisions locked</a></li>
       <li><a href="#open">What's next</a></li>
