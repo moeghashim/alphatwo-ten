@@ -1087,7 +1087,7 @@
     <!-- =========================================== -->
     <h2 id="eval">12 · Evaluation &amp; the improvement loop</h2>
     <p>
-      "Evaluation" in this system isn't one component — it's <strong>gates at three points in the
+      "Evaluation" in this system isn't one component — it's <strong>gates at four points in the
       lifecycle</strong>, each checking a different thing. Together they hold quality up; what they
       do <em>not</em> yet form is a <strong>loop that makes the system better over time</strong>.
       This section names what exists and marks what is deliberately still open.
@@ -1098,6 +1098,7 @@
       <tr><th>Gate · stage</th><th>What it evaluates</th></tr>
       <tr><td class="k"><strong>Reviewer</strong> · build-time</td><td class="v">In the factory: runs the tests, audits the <code>SKILL.md</code>, and checks the tool's emitted output against the contract schema — the <em>same gate as lint/test failures</em> (§9). Critique is bucketed <code>[MUST]/[SHOULD]/[NICE]/[ASK]</code>, loops with the Executor up to three rounds, and zero <code>[MUST]</code> is the bar to ship. <strong>Evaluates the tool.</strong></td></tr>
       <tr><td class="k"><strong><code>agent-cli-kit verify</code></strong> · build-time</td><td class="v">Contract conformance as a CI quality gate — <em>shape, not runtime</em> (#32). A tool that doesn't conform doesn't ship. <strong>Evaluates the tool's contract.</strong></td></tr>
+      <tr><td class="k"><strong>Proposal judge</strong> · handoff-time</td><td class="v">When a specialist returns work, Maestro runs an <strong>independent LLM judge</strong> — a <em>different model family</em> from the one that drafted it — over the proposal (<code>approve / revise / reject</code>) for safety and scope before accepting the handoff. <strong>Evaluates the work product.</strong> <span class="mono" style="color:var(--text-dim)">(shown in the POC: gpt-5.5 judging Max's drafted SEO proposal)</span></td></tr>
       <tr><td class="k"><strong>The policy gate</strong> · action-time</td><td class="v">A deterministic, platform-side recompute of spend caps, allow-lists, and time rules <em>before</em> the broker executes; spend is bounded ahead of the fact (#31, §11). <strong>Evaluates whether an action is permitted</strong> — not whether it is good.</td></tr>
       <tr><td class="k"><strong>Reconciliation</strong> · after the fact</td><td class="v">A sweep that reads external truth back against the ledger to close the "effect happened, webhook lost" gap (§11). <strong>Evaluates system consistency.</strong></td></tr>
     </table>
@@ -1110,10 +1111,11 @@
     <p>
       The one place real outcome measurement already appears is <em>inside a tool</em>: a domain
       specialist that scores its own output. <strong>Max</strong> auditing a site with
-      <strong>Lighthouse</strong> — a concrete SEO/performance number — is an outcome eval. But the
-      loop stops there: Max <em>suggests</em> changes, Maestro acknowledges "would execute," and
-      nothing re-measures. The audit layer (§8) already records every action, so the <strong>data
-      to evaluate outcomes exists</strong> — nothing consumes it yet.
+      <strong>Lighthouse</strong> — a concrete SEO/performance number — is an outcome eval. The
+      proposal judge above then evaluates what Max <em>suggests</em> — but only the proposal, not
+      the <em>result</em>: nothing applies the change or re-measures the site afterward. The audit
+      layer (§8) already records every action, so the <strong>data to close that gap exists</strong>
+      — nothing consumes it yet.
     </p>
 
     <h3>The loop that isn't closed yet</h3>
@@ -1123,7 +1125,7 @@
         measure <span style="color:var(--text-dim)">(outcome eval)</span> →
         attribute <span style="color:var(--text-dim)">(which tool / prompt / decision — from the audit trail, §8)</span> →
         propose <span style="color:var(--text-dim)">(a new tool version, prompt, or guardrail)</span> →
-        gate <span style="color:var(--text-dim)">(Reviewer + <code>verify</code> + the policy gate)</span> →
+        gate <span style="color:var(--text-dim)">(Reviewer + <code>verify</code> + the proposal judge + the policy gate)</span> →
         ship → re-measure
       </p>
     </div>
