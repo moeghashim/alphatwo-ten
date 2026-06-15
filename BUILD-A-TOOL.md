@@ -5,9 +5,9 @@ Fill in the block at the top, then give the agent the whole file. The agent work
 tool's own repo and builds against the published kit.
 
 > **Prerequisite:** `@tenwhy/agent-cli-kit` + the `create-tenwhy-tool` template must already
-> exist (see [`/tool` §0](https://tenwhy.pages.dev/tool#kit)). If they don't, build the kit
-> first — this brief assumes them. (For a throwaway/standalone CLI with no kit, say so and
-> ask for the kit-free variant instead.)
+> exist (see [`/tool` §0](https://tenwhy.pages.dev/tool#kit)). If they don't, **build the kit
+> first** — use [`BUILD-THE-KIT.md`](BUILD-THE-KIT.md). This brief assumes them. (For a
+> throwaway/standalone CLI with no kit, say so and ask for the kit-free variant instead.)
 
 ## Fill this in
 
