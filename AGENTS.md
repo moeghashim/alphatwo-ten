@@ -18,8 +18,10 @@ on every push to `main` via Cloudflare's native GitHub integration.
 | `branding/tenwhy.svg` | Wordmark + favicon. The brand mark (inlined into each page's masthead). |
 | `_redirects` | Cloudflare Pages redirects (e.g. legacy `/system-map` → `/design`). |
 | `CONTRACT.md` | **The tool contract** (`v0.1`) — the normative spec every tool CLI conforms to: command shape, output envelope, exit codes, plan/apply + the platform gate/broker, injected identity, introspection, conformance. Downstream of design §9–11; `agent-cli-kit verify` checks it in CI. |
-| `BUILD-A-TOOL.md` | **Build-a-tool brief** — a reusable, fill-in handoff to give an agent to build one conforming tool CLI. Wraps `CONTRACT.md` + `tool.html`. |
-| `BUILD-THE-KIT.md` | **Build-the-kit brief** — the spec to build `agent-cli-kit` (the prerequisite for any tool). Implements `CONTRACT.md` once. |
+
+**Building tools** (the build-a-tool + build-the-kit briefs) lives in its own public repo —
+[`build-cli-tool`](https://github.com/moeghashim/build-cli-tool) — a clonable template / agent
+skill. `CONTRACT.md` here is canonical; that repo carries a synced copy.
 
 ## Source-of-truth hierarchy
 
