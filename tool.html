@@ -138,11 +138,36 @@
     <div class="panel warm">
       <p style="margin:0">
         <span class="pill note">prerequisite</span> &nbsp;Tools are built <strong>on</strong>
-        <code>@tenwhy/agent-cli-kit</code> + the starter template. If those don't exist yet, build
-        them first — this guide doubles as their spec. The kit implements the contract once so a
-        tool author writes only tool-specific logic.
+        <code>@tenwhy/agent-cli-kit</code> + the starter template. <strong>They don't exist yet —
+        build them first (<a href="#kit">§0</a>).</strong> This guide doubles as their spec: the kit
+        implements the contract once so a tool author writes only tool-specific logic.
       </p>
     </div>
+
+
+    <h2 id="kit">0 · Build the kit first</h2>
+    <p>
+      Everything below assumes <code>@tenwhy/agent-cli-kit</code> and the
+      <code>create-tenwhy-tool</code> template already exist. <strong>They don't yet — build them
+      once, before any tool.</strong> The code examples in this guide <em>are</em> the kit's
+      intended interface, so building the kit means making them real. Until it exists, a tool's
+      <code>import { defineCommand } from '@tenwhy/agent-cli-kit'</code> resolves to nothing.
+    </p>
+    <p>One kit, built once; then every tool is built on it. What the kit must provide:</p>
+    <table class="decisions">
+      <tr><th>Surface</th><th>What it does</th></tr>
+      <tr><td class="k"><code>defineCommand</code> + <code>z</code></td><td class="v">The command API (Zod re-exported). A tool author touches only this — never Stricli directly.</td></tr>
+      <tr><td class="k">The runner</td><td class="v">Wraps Stricli: parses args, validates input, emits the <code>{ok,data,error,meta}</code> envelope on <code>--json</code>, maps errors → exit codes, bounds output, and provides the universal flags (<code>--json</code>, <code>--describe</code>, <code>--dry-run</code>, <code>--fields</code>, <code>--limit</code>…). The whole <a href="CONTRACT.md">contract</a>, implemented once.</td></tr>
+      <tr><td class="k"><code>--describe</code> generator</td><td class="v">Emits the machine schema (<a href="CONTRACT.md">CONTRACT §9</a>) from the Zod definitions — the surface Maestro routes on.</td></tr>
+      <tr><td class="k"><code>ctx</code> (run context)</td><td class="v">Helpers handed to every <code>run</code>: <code>error()</code> (enumerated), <code>cost()</code>, <code>idem()</code>, <code>applyPlan()</code>, run-dir read/write, and egress-allow-listed clients for the LLM gateway + scraping service. (Tool-specific libs like Lighthouse are the <em>tool's</em> own deps, not the kit's.)</td></tr>
+      <tr><td class="k"><code>verify</code></td><td class="v">The conformance checker run in CI (§9) — asserts envelope, verbs, errors, exit codes, bounded output, and <code>--describe</code> ↔ schema.</td></tr>
+      <tr><td class="k"><code>create-tenwhy-tool</code></td><td class="v">The scaffolder + template that stamps out a conforming tool repo (§3).</td></tr>
+    </table>
+    <p>
+      <span class="pill note">order</span> &nbsp;<strong>Kit → template → tools.</strong> If you're an
+      agent told to "build a tool" and the kit isn't published yet, build the kit first using the
+      table above as its spec, then come back to §3.
+    </p>
 
 
     <h2 id="stack">1 · The stack (settled)</h2>
@@ -338,6 +363,7 @@ Run `seo &lt;cmd&gt; --describe` for the machine spec.</pre>
   <aside>
     <div class="eyebrow">On this page</div>
     <ol>
+      <li><a href="#kit">Build the kit first</a></li>
       <li><a href="#stack">The stack</a></li>
       <li><a href="#layers">Three layers</a></li>
       <li><a href="#scaffold">Scaffold &amp; layout</a></li>
