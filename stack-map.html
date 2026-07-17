@@ -427,10 +427,34 @@
       when called, tears down after). Five external platforms carry the load. This page is what
       lives where, why, and how the pieces connect on signup and during the first build.
     </p>
+    <div class="panel" style="border-color: var(--clay); background: linear-gradient(180deg, rgba(217,119,87,0.05), var(--bg-card));">
+      <h3 style="margin-top:0"><span class="pill ondemand">now</span>&nbsp; Built on Stripe Projects</h3>
+      <p style="margin-bottom:10px">
+        The whole stack is being built using <strong>Stripe Projects</strong> — Implementation 2.
+        Stripe Projects provisions the managed equivalents of the top five hand-wired services below;
+        everything else is shared or unchanged across both implementations.
+      </p>
+      <table class="kv" style="margin:0">
+        <tr><th>Capability</th><th>Hand-wired · Impl 1</th><th>Stripe Projects · Impl 2</th></tr>
+        <tr><td class="k">Database</td><td class="v">Render Postgres</td><td class="v"><strong>Neon</strong></td></tr>
+        <tr><td class="k">µVM compute</td><td class="v">Sapiom / Blaxel</td><td class="v"><strong>Daytona</strong></td></tr>
+        <tr><td class="k">Auth</td><td class="v">Custom magic link · Cloudflare Email</td><td class="v"><strong>WorkOS</strong></td></tr>
+        <tr><td class="k">Secrets vault</td><td class="v">Infisical</td><td class="v"><strong>Stripe Secret Store</strong></td></tr>
+        <tr><td class="k">Scheduler · jobs</td><td class="v">Render Cron Jobs</td><td class="v"><strong>Inngest</strong></td></tr>
+        <tr><td class="k">LLM gateway</td><td class="v">OpenRouter</td><td class="v">OpenRouter <span class="pill note">shared</span></td></tr>
+        <tr><td class="k">Source control</td><td class="v">GitHub</td><td class="v">GitHub <span class="pill note">shared</span></td></tr>
+        <tr><td class="k">Service hosting</td><td class="v">Render</td><td class="v">Render <span class="pill note">unchanged</span></td></tr>
+        <tr><td class="k">Edge · DNS · CDN · email</td><td class="v">Cloudflare</td><td class="v">Cloudflare <span class="pill note">unchanged</span></td></tr>
+        <tr><td class="k">Object store</td><td class="v">Cloudflare R2</td><td class="v">Cloudflare R2 <span class="pill note">unchanged</span></td></tr>
+        <tr><td class="k">Observability</td><td class="v">Sentry · Better Stack</td><td class="v">Sentry · Better Stack <span class="pill note">unchanged</span></td></tr>
+      </table>
+    </div>
+
     <p>
-      <span class="pill note">scope</span>&nbsp; This page details <strong>Implementation 1</strong>
-      — the hand-wired stack. Implementation 2 provisions equivalents through Stripe Projects
-      (Neon, Daytona, WorkOS, Stripe Secret Store, Inngest); the side-by-side component map lives
+      <span class="pill note">scope</span>&nbsp; The build target is <strong>Implementation 2 —
+      Stripe Projects</strong> (summary above). The detailed walkthrough below still describes the
+      <strong>Implementation 1</strong> hand-wired topology; each Stripe Projects service maps onto
+      the hand-wired one it replaces per the table above. The full side-by-side component map lives
       on <a href="build.html">the build page</a>.
     </p>
 
